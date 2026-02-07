@@ -2,7 +2,7 @@
 
 An interactive p5.js sketch that creates a dotted portrait effect from any image with a transparent background. The sketch uses a random walk algorithm to progressively fill the portrait with dots, followed by an "alive mode" that continuously adds subtle details.
 
-![Example Output](example.png)
+![Example Output](assets/self-portrait-example.png)
 
 ## Credits
 
