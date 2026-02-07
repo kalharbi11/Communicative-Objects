@@ -1,0 +1,23 @@
+# Ignore personal portrait images - users should add their own
+assets/portrait.png
+
+# Python temp files
+*.pyc
+__pycache__/
+
+# Temporary Claude files
+tmpclaude-*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Local server logs
+*.log
