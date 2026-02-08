@@ -23,7 +23,7 @@ var isAliveMode = false;
 var aliveFrameCount = 0; // Track frames in alive mode
 var currentDotColor;
 var currentBgColor;
-var useImageColors = true;
+var useImageColors = false;
 
 var img;
 var vScale = 2;
@@ -31,8 +31,7 @@ var vScale = 2;
 function preload() {
   img = loadImage('assets/self-portrait-example.png',
     () => {
-      console.log('Image loaded successfully');
-      document.body.insertAdjacentHTML('beforeend', '<div style="color:green;font-weight:bold;">Image loaded successfully</div>');
+      // console.log('Image loaded successfully');
     },
     (err) => {
       console.error('Error loading image:', err);
@@ -165,7 +164,7 @@ function setupControls() {
   });
 
   document.getElementById('aliveSpeed').addEventListener('input', function() {
-    aliveSpeed = parseInt(this.value);
+    aliveSpeed = 0; // Set default aliveSpeed to 0
     document.getElementById('aliveSpeedValue').textContent = aliveSpeed;
   });
 
