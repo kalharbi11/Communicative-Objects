@@ -1,0 +1,134 @@
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  background: #fff;
+  color: #111;
+}
+
+.layout {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding: 16px;
+  align-items: flex-start;
+  justify-content: center;
+  max-width: 1680px;
+  margin: 0 auto;
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 320px;
+  max-width: 700px;
+  align-items: center;
+}
+
+.label {
+  font-size: 13px;
+  letter-spacing: 0.02em;
+  color: #333;
+}
+
+#original {
+  display: block;
+  max-height: 700px;
+  max-width: 700px;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+}
+
+#canvas-holder {
+  max-height: 700px;
+  max-width: 700px;
+  width: fit-content;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+canvas {
+  display: block;
+  max-height: 700px;
+  max-width: 700px;
+  width: auto !important;
+  height: auto !important;
+  object-fit: contain;
+}
+
+@media (max-width: 1000px) {
+  .panel {
+    max-width: 600px;
+  }
+
+  #original {
+    max-width: 600px;
+  }
+
+  #canvas-holder {
+    max-width: 600px;
+  }
+
+  canvas {
+    max-width: 600px;
+  }
+}
+
+@media (max-width: 768px) {
+  .layout {
+    gap: 12px;
+    padding: 12px;
+  }
+
+  .panel {
+    max-width: 100%;
+  }
+
+  #original {
+    max-height: 500px;
+    max-width: 500px;
+  }
+
+  #canvas-holder {
+    max-height: 500px;
+    max-width: 500px;
+  }
+
+  canvas {
+    max-height: 500px;
+    max-width: 500px;
+  }
+}
+
+@media (max-width: 480px) {
+  .layout {
+    gap: 8px;
+    padding: 8px;
+  }
+
+  .label {
+    font-size: 12px;
+  }
+
+  #original {
+    max-height: 350px;
+    max-width: 350px;
+  }
+
+  #canvas-holder {
+    max-height: 350px;
+    max-width: 350px;
+  }
+
+  canvas {
+    max-height: 350px;
+    max-width: 350px;
+  }
+}
