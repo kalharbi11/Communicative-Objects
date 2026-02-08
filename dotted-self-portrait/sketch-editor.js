@@ -23,7 +23,7 @@ var isAliveMode = false;
 var aliveFrameCount = 0; // Track frames in alive mode
 var currentDotColor;
 var currentBgColor;
-var useImageColors = false;
+var useSolidColor = true;
 
 var img;
 var vScale = 2;
