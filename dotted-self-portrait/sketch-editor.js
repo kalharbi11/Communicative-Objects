@@ -30,8 +30,14 @@ var vScale = 2;
 
 function preload() {
   img = loadImage('assets/self-portrait-example.png',
-    () => console.log('Image loaded successfully'),
-    (err) => console.error('Error loading image:', err)
+    () => {
+      console.log('Image loaded successfully');
+      document.body.insertAdjacentHTML('beforeend', '<div style="color:green;font-weight:bold;">Image loaded successfully</div>');
+    },
+    (err) => {
+      console.error('Error loading image:', err);
+      document.body.insertAdjacentHTML('beforeend', '<div style="color:red;font-weight:bold;">Error loading image: ' + err + '</div>');
+    }
   );
 }
 
