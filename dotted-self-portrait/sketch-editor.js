@@ -8,14 +8,14 @@ var dotYstart = 327;
 var rndMin = -10;
 var rndMax = 10;
 var nDots = 195;
-var aliveSpeed = 50;
+var aliveSpeed = 0;
 var aliveMaxSize = 2;
 var aliveMinSize = 0.5;
 var maxBrushSize = 7;
 var minBrushSize = 1;
 var alphaThreshold = 42;
 var dotOpacity = 229;
-var brightnessSensitivity = 0.6;
+var brightnessSensitivity = 1.6;
 var colorMixAmount = 0.38;
 var maxTotalDots = 40000;
 var totalDotsDrawn = 0;
@@ -23,7 +23,7 @@ var isAliveMode = false;
 var aliveFrameCount = 0; // Track frames in alive mode
 var currentDotColor;
 var currentBgColor;
-var useImageColors = true;
+var useImageColors = false;
 
 var img;
 var vScale = 2;
