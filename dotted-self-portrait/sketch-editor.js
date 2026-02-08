@@ -23,7 +23,7 @@ var isAliveMode = false;
 var aliveFrameCount = 0; // Track frames in alive mode
 var currentDotColor;
 var currentBgColor;
-var useSolidColor = true;
+var useImageColors = false;
 
 var img;
 var vScale = 2;
@@ -311,7 +311,7 @@ function loadSettings() {
     maxTotalDots = settings.maxTotalDots || 40000;
 
     // Update useImageColors (default true)
-    useImageColors = (settings.useImageColors !== undefined) ? settings.useImageColors : true;
+    useImageColors = (settings.useImageColors !== undefined) ? settings.useImageColors : false;
 
     // Update colors
     if (settings.dotColor) {
