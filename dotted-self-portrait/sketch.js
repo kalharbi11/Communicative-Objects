@@ -20,7 +20,7 @@ var vScale = 2;
 
 function preload() {
   // Load your image here
-  img = loadImage('assets/portrait.png',
+  img = loadImage('assets/self-portrait-example.png',
     () => console.log('Image loaded successfully'),
     (err) => console.error('Error loading image:', err)
   );
