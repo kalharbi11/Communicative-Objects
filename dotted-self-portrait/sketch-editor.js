@@ -16,7 +16,7 @@ var minBrushSize = 1;
 var alphaThreshold = 42;
 var dotOpacity = 229;
 var brightnessSensitivity = 1.6;
-var colorMixAmount = 0.38;
+var colorMixAmount = 0;
 var maxTotalDots = 40000;
 var totalDotsDrawn = 0;
 var isAliveMode = false;
@@ -164,7 +164,7 @@ function setupControls() {
   });
 
   document.getElementById('aliveSpeed').addEventListener('input', function() {
-    aliveSpeed = 0; // Set default aliveSpeed to 0
+    aliveSpeed = parseInt(this.value);
     document.getElementById('aliveSpeedValue').textContent = aliveSpeed;
   });
 
