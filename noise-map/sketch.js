@@ -7,6 +7,12 @@ let features = [];             // ALL features
 let projectedPaths = [];       // [{rings, zip, feature}]
 let projection;
 let hovered = null;
+let complaintColumns = [];
+const MAP_CROP_LEFT = 0.2;
+const MAP_CROP_TOP = 0.3;
+let cropScale = 1;
+let cropOffsetX = 0;
+let cropOffsetY = 0;
 
 let canvasSize = 900;
 let ZIP_COLUMN = null;
@@ -63,7 +69,16 @@ function preload() {
 
 function setup() {
   canvasSize = getCanvasSize();
-  createCanvas(canvasSize, canvasSize);
+  const cnv = createCanvas(canvasSize, canvasSize);
+  const mount = document.getElementById("canvas-mount");
+  if (mount) cnv.parent(mount);
+  document.addEventListener(
+    "pointerdown",
+    () => {
+      enableSound();
+    },
+    { once: true }
+  );
 
   // On-canvas debug so you don't have to guess
   background(245);
@@ -86,6 +101,7 @@ function setup() {
   } else {
     detectZipColumn();
     buildZipMap();
+    detectComplaintColumns();
   }
 
   features = geojson.features; // never filter geometry away
@@ -93,6 +109,7 @@ function setup() {
 
   console.log("CSV columns:", table ? table.columns : []);
   console.log("Detected ZIP column:", ZIP_COLUMN);
+  console.log("Complaint columns:", complaintColumns);
   console.log("CSV rows:", table ? table.getRowCount() : 0);
   console.log("zipMap.size:", zipMap.size);
   console.log("GeoJSON features:", features.length);
@@ -101,6 +118,8 @@ function setup() {
   if (!projection || projectedPaths.length === 0) {
     console.error("Projection/path build failed. Check d3 loaded and GeoJSON structure.");
   }
+
+  updateInfoPanel(null, []);
 }
 
 function windowResized() {
@@ -110,8 +129,27 @@ function windowResized() {
 }
 
 function getCanvasSize() {
-  const pad = 24;
-  return Math.max(320, Math.min(windowWidth, windowHeight) - pad);
+  const pad = 12;
+  const mapColumn = document.getElementById("map-column");
+  const infoPanel = document.getElementById("info-panel");
+  const gap = 18;
+  const availableWidth = mapColumn ? mapColumn.clientWidth : windowWidth - pad * 2;
+  const panelHeight = infoPanel ? infoPanel.offsetHeight : 220;
+  const availableHeight = windowHeight - pad * 2 - panelHeight - gap;
+  const size = Math.max(220, Math.min(availableWidth, availableHeight));
+  document.documentElement.style.setProperty("--map-size", `${size}px`);
+
+  if (infoPanel) {
+    const updatedPanelHeight = infoPanel.offsetHeight;
+    const updatedAvailableHeight = windowHeight - pad * 2 - updatedPanelHeight - gap;
+    const adjustedSize = Math.max(220, Math.min(availableWidth, updatedAvailableHeight));
+    if (Math.abs(adjustedSize - size) > 1) {
+      document.documentElement.style.setProperty("--map-size", `${adjustedSize}px`);
+      return adjustedSize;
+    }
+  }
+
+  return size;
 }
 
 function mousePressed() {
@@ -121,6 +159,13 @@ function mousePressed() {
 }
 
 function enableSound() {
+  if (soundEnabled) return;
+  try {
+    const ctx = getAudioContext();
+    if (ctx && ctx.state !== "running") {
+      ctx.resume();
+    }
+  } catch {}
   userStartAudio();
   soundEnabled = true;
 }
@@ -151,9 +196,13 @@ function stopAllSounds() {
 }
 
 function normalizeZip(z) {
-  return String(z ?? "")
+  const cleaned = String(z ?? "")
     .replace(/\.0$/, "")
     .trim();
+  if (/^\d{4}$/.test(cleaned)) {
+    return `0${cleaned}`;
+  }
+  return cleaned;
 }
 
 function detectZipColumn() {
@@ -170,11 +219,52 @@ function detectZipColumn() {
   }
 }
 
+function detectComplaintColumns() {
+  complaintColumns = [];
+  if (!table) return;
+
+  const exact = [
+    "Top 1 Complaint Type",
+    "Top 2 Complaint Type",
+    "Top 3 Complaint Type",
+    "Top 4 Complaint Type",
+  ];
+  const hasExact = exact.every((col) => table.columns.includes(col));
+  if (hasExact) {
+    complaintColumns = exact.slice();
+    return;
+  }
+
+  const matches = table.columns
+    .map((col) => {
+      const label = String(col);
+      const lower = label.toLowerCase();
+      if (!lower.includes("complaint") || !lower.includes("type")) return null;
+      const match = label.match(/([1-4])/);
+      if (!match) return null;
+      return { col, rank: Number.parseInt(match[1], 10) };
+    })
+    .filter(Boolean)
+    .sort((a, b) => a.rank - b.rank);
+
+  complaintColumns = matches.map((m) => m.col).slice(0, 4);
+
+  if (complaintColumns.length < 4) {
+    const fallback = table.columns.filter(
+      (col) =>
+        col !== ZIP_COLUMN &&
+        !String(col).toLowerCase().includes("percent") &&
+        !String(col).includes("%")
+    );
+    complaintColumns = fallback.slice(0, 4);
+  }
+}
+
 function buildZipMap() {
   zipMap.clear();
   for (let i = 0; i < table.getRowCount(); i++) {
     const zip = normalizeZip(table.getString(i, ZIP_COLUMN));
-    if (zip) zipMap.set(zip, table.rows[i]);
+    if (zip) zipMap.set(zip, table.getRow(i));
   }
 }
 
@@ -197,6 +287,11 @@ function computeProjectionAndPaths() {
 
   const fc = { type: "FeatureCollection", features };
   projection = d3.geoMercator().fitSize([width, height], fc);
+  const cropLeft = MAP_CROP_LEFT;
+  const cropTop = MAP_CROP_TOP;
+  cropScale = Math.max(1 / (1 - cropLeft), 1 / (1 - cropTop));
+  cropOffsetX = width * cropLeft * cropScale;
+  cropOffsetY = height * cropTop * cropScale;
 
   projectedPaths = features.map((feature) => {
     const geom = feature.geometry;
@@ -206,7 +301,7 @@ function computeProjectionAndPaths() {
       rings = geom.coordinates.map((ring) =>
         ring.map(([lon, lat]) => {
           const [x, y] = projection([lon, lat]);
-          return { x, y };
+          return { x: x * cropScale - cropOffsetX, y: y * cropScale - cropOffsetY };
         })
       );
     } else if (geom.type === "MultiPolygon") {
@@ -214,7 +309,7 @@ function computeProjectionAndPaths() {
         poly.map((ring) =>
           ring.map(([lon, lat]) => {
             const [x, y] = projection([lon, lat]);
-            return { x, y };
+            return { x: x * cropScale - cropOffsetX, y: y * cropScale - cropOffsetY };
           })
         )
       );
@@ -222,6 +317,55 @@ function computeProjectionAndPaths() {
 
     return { rings, zip: getFeatureZip(feature), feature };
   });
+}
+
+function getComplaintsForZip(zip) {
+  const normalized = normalizeZip(zip);
+  if (!normalized || !zipMap.has(normalized)) return [];
+  const row = zipMap.get(normalized);
+  if (!row || !complaintColumns.length) return [];
+  return complaintColumns.map((col) => row.getString(col).trim());
+}
+
+function updateInfoPanel(zip, complaints) {
+  const zipDisplay = document.getElementById("zip-display");
+  const zipCell = document.getElementById("zip-cell");
+  const complaintEls = [
+    document.getElementById("complaint-1"),
+    document.getElementById("complaint-2"),
+    document.getElementById("complaint-3"),
+    document.getElementById("complaint-4"),
+  ];
+
+  if (!zipDisplay || !zipCell) return;
+
+  if (!zip) {
+    zipDisplay.textContent = "Hover a ZIP";
+    zipCell.textContent = "--";
+    zipCell.classList.add("muted");
+    complaintEls.forEach((el) => {
+      if (!el) return;
+      el.textContent = "--";
+      el.classList.add("muted");
+    });
+    return;
+  }
+
+  zipDisplay.textContent = `ZIP ${zip}`;
+  zipCell.textContent = zip;
+  zipCell.classList.remove("muted");
+
+  for (let i = 0; i < complaintEls.length; i++) {
+    const el = complaintEls[i];
+    if (!el) continue;
+    const value = complaints[i];
+    el.textContent = value || "--";
+    if (value) {
+      el.classList.remove("muted");
+    } else {
+      el.classList.add("muted");
+    }
+  }
 }
 
 function draw() {
@@ -238,31 +382,42 @@ function draw() {
 
   hovered = null;
 
-  let mouseLonLat;
-  try {
-    mouseLonLat = projection.invert([mouseX, mouseY]);
-  } catch {
-    return;
-  }
-
-  for (let i = 0; i < features.length; i++) {
-    if (d3.geoContains(features[i], mouseLonLat)) {
-      hovered = projectedPaths[i];
-      break;
+  let mouseLonLat = null;
+  if (mouseX >= 0 && mouseX <= width && mouseY >= 0 && mouseY <= height) {
+    try {
+      const invX = (mouseX + cropOffsetX) / cropScale;
+      const invY = (mouseY + cropOffsetY) / cropScale;
+      mouseLonLat = projection.invert([invX, invY]);
+    } catch {
+      mouseLonLat = null;
     }
   }
 
-  const currentHoverZip = hovered ? hovered.zip : null;
+  if (mouseLonLat) {
+    for (let i = 0; i < features.length; i++) {
+      if (d3.geoContains(features[i], mouseLonLat)) {
+        hovered = projectedPaths[i];
+        break;
+      }
+    }
+  }
+  const currentHoverZip = hovered ? normalizeZip(hovered.zip) : null;
   if (currentHoverZip !== lastHoverZip && currentHoverZip !== null) {
-    handleZipChange(currentHoverZip);
+    if (soundEnabled) handleZipChange(currentHoverZip);
   } else if (currentHoverZip === null && lastHoverZip !== null) {
     stopAllSounds();
   }
+
+  if (currentHoverZip !== lastHoverZip) {
+    const complaints = getComplaintsForZip(currentHoverZip);
+    updateInfoPanel(currentHoverZip, complaints);
+  }
+
   lastHoverZip = currentHoverZip;
 
   // Draw all polygons
   for (let p of projectedPaths) {
-    const inCSV = zipMap.has(p.zip);
+    const inCSV = zipMap.has(normalizeZip(p.zip));
 
     // non-matching ZIPs still draw faintly
     stroke(inCSV ? 160 : 220);
@@ -280,7 +435,7 @@ function draw() {
   }
 
   // Hover highlight only for ZIPs in CSV
-  if (hovered && zipMap.has(hovered.zip)) {
+  if (hovered && zipMap.has(normalizeZip(hovered.zip))) {
     fill(255, 220, 120, 180);
     stroke(200, 80, 0);
     strokeWeight(2);
@@ -300,7 +455,7 @@ function draw() {
 
   if (!soundEnabled) {
     noStroke();
-    fill(0, 0, 0, 140);
+    fill(0, 0, 0, 120);
     rect(0, 0, width, height);
     fill(255);
     textSize(24);
@@ -308,4 +463,5 @@ function draw() {
     text("Click to enable sound", width / 2, height / 2);
   }
 }
+
 

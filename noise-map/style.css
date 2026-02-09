@@ -1,42 +1,264 @@
-html, body {
+:root {
+  --bg: #f4f6f8;
+  --text: #1f2937;
+  --muted: #6b7280;
+  --border: #e6e8ec;
+  --shadow: 0 12px 28px rgba(15, 23, 42, 0.12);
+  --page-pad: 10px;
+  --map-size: 640px;
+
+  --zip-header: #6f7277;
+  --c1-header: #e35d3b;
+  --c2-header: #f0b84b;
+  --c3-header: #8db24a;
+  --c4-header: #55b7a6;
+
+  --zip-tint: #f3f4f6;
+  --c1-tint: #fff3ef;
+  --c2-tint: #fff8e8;
+  --c3-tint: #f3fae9;
+  --c4-tint: #e9fbf7;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
   height: 100%;
   margin: 0;
   padding: 0;
-  overflow: hidden;
 }
 
 body {
-  background: #f4f4f4;
+  background: var(--bg);
+  color: var(--text);
+  font-family: "Manrope", "Segoe UI", sans-serif;
+  overflow: auto;
+}
+
+#layout {
+  display: flex;
+  gap: 24px;
+  padding: var(--page-pad);
+  align-items: flex-start;
+}
+
+#side-info {
+  width: clamp(200px, 18vw, 260px);
+  padding: 8px 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+#map-column {
+  flex: 1;
+  min-width: 280px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  align-items: center;
+}
+
+.home-link {
+  align-self: flex-start;
+  padding: 0;
+  text-decoration: none;
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.home-link:hover {
+  text-decoration: underline;
+}
+
+.side-title {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 600;
+}
+
+.side-copy {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+#map-wrap {
+  width: min(100%, var(--map-size));
+  aspect-ratio: 1 / 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+#canvas-mount {
+  width: 100%;
+  height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-.home-link {
-  position: fixed;
-  top: 16px;
-  left: 16px;
-  padding: 8px 12px;
-  background: #ffffff;
-  color: #111;
-  border-radius: 6px;
-  text-decoration: none;
-  box-shadow: 0 1px 6px rgba(0,0,0,0.15);
-  font-size: 14px;
-  z-index: 10;
-}
-
-.home-link:hover {
-  background: #f0f0f0;
-}
-
 canvas {
   display: block;
   margin: 0;
-  background: #fff;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  outline: none;
 }
 
-#defaultCanvas0 {
-  outline: none;
+#info-panel {
+  width: min(100%, var(--map-size));
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.panel-head {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.panel-title {
+  font-size: 12px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+#zip-display {
+  font-size: 28px;
+  font-weight: 600;
+}
+
+.panel-subtitle {
+  font-size: 14px;
+  color: var(--muted);
+  font-weight: 500;
+}
+
+#info-scroll {
+  flex: 1;
+  overflow: visible;
+  padding-right: 6px;
+}
+
+#comparison-table {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+  min-width: 0;
+  margin-bottom: 12px;
+}
+
+.col {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.col-header {
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 8px 10px;
+  text-align: center;
+}
+
+.col-body {
+  padding: 14px 10px;
+  min-height: 90px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.cell {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.3;
+}
+
+.col-body.zip .cell {
+  white-space: nowrap;
+}
+
+.cell.muted {
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.zip.col-header {
+  background: var(--zip-header);
+}
+
+.c1.col-header {
+  background: var(--c1-header);
+}
+
+.c2.col-header {
+  background: var(--c2-header);
+}
+
+.c3.col-header {
+  background: var(--c3-header);
+}
+
+.c4.col-header {
+  background: var(--c4-header);
+}
+
+.zip.col-body {
+  background: var(--zip-tint);
+}
+
+.c1.col-body {
+  background: var(--c1-tint);
+}
+
+.c2.col-body {
+  background: var(--c2-tint);
+}
+
+.c3.col-body {
+  background: var(--c3-tint);
+}
+
+.c4.col-body {
+  background: var(--c4-tint);
+}
+
+@media (max-width: 900px) {
+  #layout {
+    flex-direction: column;
+  }
+
+  #side-info,
+  #map-wrap,
+  #info-panel,
+  #map-column {
+    width: 100%;
+  }
+
+  #side-info {
+    padding: 0 4px;
+  }
+
+  #map-column {
+    align-items: center;
+  }
 }

@@ -5,21 +5,88 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Brooklyn ZIP Hover Map</title>
 
-  <!-- Styles -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700&display=swap"
+    rel="stylesheet"
+  />
+
   <link rel="stylesheet" href="style.css" />
 
-  <!-- p5.js must load before sketch.js -->
+  <!-- p5.js -->
   <script src="https://cdn.jsdelivr.net/npm/p5@1.9.0/lib/p5.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/p5@1.9.0/lib/addons/p5.sound.min.js"></script>
 
-  <!-- Full d3 bundle so d3.geoMercator + d3.geoContains are available -->
-  <script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
+  <!-- Full d3 (includes geo) -->
+  <script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
 
-  <!-- Your sketch (NOT deferred so p5 lifecycle hooks register correctly) -->
+  <!-- Your sketch -->
   <script src="sketch.js"></script>
 </head>
 <body>
-  <a class="home-link" href="../index.html">Return to Home</a>
-  <!-- Canvas is injected by p5.js -->
+  <div id="layout">
+    <aside id="side-info" aria-label="Project description">
+      <a class="home-link" href="../index.html">Return to home</a>
+      <h1 class="side-title">Noise Map</h1>
+      <p class="side-copy">
+        Explore Brooklyn ZIP codes and compare the top noise complaint types.
+        Hover a ZIP on the map to update the comparison table.
+      </p>
+    </aside>
+
+    <div id="map-column">
+      <section id="map-wrap" aria-label="Brooklyn ZIP Map">
+        <div id="canvas-mount"></div>
+      </section>
+
+      <aside id="info-panel" aria-live="polite">
+        <div class="panel-head">
+          <div class="panel-title">ZIP Snapshot</div>
+          <div id="zip-display">Hover a ZIP</div>
+          <div class="panel-subtitle">Top complaint types</div>
+        </div>
+
+        <div id="info-scroll">
+          <div id="comparison-table">
+            <div class="col">
+              <div class="col-header zip">ZIP</div>
+              <div class="col-body zip">
+                <div class="cell" id="zip-cell">--</div>
+              </div>
+            </div>
+
+            <div class="col">
+              <div class="col-header c1">Complaint 1</div>
+              <div class="col-body c1">
+                <div class="cell" id="complaint-1">--</div>
+              </div>
+            </div>
+
+            <div class="col">
+              <div class="col-header c2">Complaint 2</div>
+              <div class="col-body c2">
+                <div class="cell" id="complaint-2">--</div>
+              </div>
+            </div>
+
+            <div class="col">
+              <div class="col-header c3">Complaint 3</div>
+              <div class="col-body c3">
+                <div class="cell" id="complaint-3">--</div>
+              </div>
+            </div>
+
+            <div class="col">
+              <div class="col-header c4">Complaint 4</div>
+              <div class="col-body c4">
+                <div class="cell" id="complaint-4">--</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </div>
 </body>
 </html>
