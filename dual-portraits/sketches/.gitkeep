@@ -1,0 +1,2 @@
+# Sketches folder - auto-backups go in the archive sub-folder
+# To create a backup: node backup-sketch.js
