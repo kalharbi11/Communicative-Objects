@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Brooklyn ZIP Hover Map</title>
+
+  <!-- Styles -->
+  <link rel="stylesheet" href="style.css" />
+
+  <!-- p5.js must load before sketch.js -->
+  <script src="https://cdn.jsdelivr.net/npm/p5@1.9.0/lib/p5.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/p5@1.9.0/lib/addons/p5.sound.min.js"></script>
+
+  <!-- Full d3 bundle so d3.geoMercator + d3.geoContains are available -->
+  <script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
+
+  <!-- Your sketch (NOT deferred so p5 lifecycle hooks register correctly) -->
+  <script src="sketch.js"></script>
+</head>
+<body>
+  <a class="home-link" href="../index.html">Return to Home</a>
+  <!-- Canvas is injected by p5.js -->
+</body>
+</html>
