@@ -1,365 +1,508 @@
-import { TuringAudioEngine } from “./audio-engine.js”;
+import { NOTE_NAMES } from "./sequencer.js";
+import { TuringAudioEngine } from "./audio-engine.js";
+
+const CIRCLE_OF_FIFTHS = [0, 7, 2, 9, 4, 11, 6, 1, 8, 3, 10, 5];
+
+const VOICE_META = [
+  {
+    id: "V1",
+    role: "Root drone",
+    color: {
+      outline: "rgba(193, 82, 66, 0.46)",
+      core: "rgba(193, 82, 66, 0.42)",
+      glow: "rgba(193, 82, 66, 0.34)",
+      text: "rgba(193, 82, 66, 0.52)",
+    },
+  },
+  {
+    id: "V2",
+    role: "Mirror sparkle",
+    color: {
+      outline: "rgba(72, 136, 120, 0.46)",
+      core: "rgba(72, 136, 120, 0.42)",
+      glow: "rgba(72, 136, 120, 0.34)",
+      text: "rgba(72, 136, 120, 0.52)",
+    },
+  },
+  {
+    id: "V3",
+    role: "Third drone",
+    color: {
+      outline: "rgba(86, 106, 154, 0.46)",
+      core: "rgba(86, 106, 154, 0.42)",
+      glow: "rgba(86, 106, 154, 0.34)",
+      text: "rgba(86, 106, 154, 0.52)",
+    },
+  },
+  {
+    id: "V4",
+    role: "Wanderer sparkle",
+    color: {
+      outline: "rgba(159, 114, 57, 0.46)",
+      core: "rgba(159, 114, 57, 0.42)",
+      glow: "rgba(159, 114, 57, 0.34)",
+      text: "rgba(159, 114, 57, 0.52)",
+    },
+  },
+  {
+    id: "V5",
+    role: "Scale walker drone",
+    color: {
+      outline: "rgba(117, 90, 150, 0.46)",
+      core: "rgba(117, 90, 150, 0.42)",
+      glow: "rgba(117, 90, 150, 0.34)",
+      text: "rgba(117, 90, 150, 0.52)",
+    },
+  },
+  {
+    id: "V6",
+    role: "String pad",
+    color: {
+      outline: "rgba(69, 124, 159, 0.46)",
+      core: "rgba(69, 124, 159, 0.42)",
+      glow: "rgba(69, 124, 159, 0.34)",
+      text: "rgba(69, 124, 159, 0.52)",
+    },
+  },
+];
 
 const engine = new TuringAudioEngine();
-let uiUpdateInterval = null;
 
-// ==========================================
-// iOS AUDIO UNLOCK
-// ==========================================
-// iOS requires a user gesture to unlock AudioContext.
-// We unlock on the first button press.
-let audioUnlocked = false;
+const els = {
+  start: document.querySelector("#start"),
+  stop: document.querySelector("#stop"),
+  nudge: document.querySelector("#nudge"),
+  status: document.querySelector("#status"),
+  bpm: document.querySelector("#bpm"),
+  bpmValue: document.querySelector("#bpm-value"),
+  reverb: document.querySelector("#reverb"),
+  reverbValue: document.querySelector("#reverb-value"),
+  delay: document.querySelector("#delay"),
+  delayValue: document.querySelector("#delay-value"),
+  master: document.querySelector("#master"),
+  masterValue: document.querySelector("#master-value"),
+  voiceGrid: document.querySelector("#voice-grid"),
+  synthControls: document.querySelector("#voice-controls"),
+  globalTrailLines: Array.from(document.querySelectorAll("#global-trail .trail-line")),
+};
 
-async function unlockAudio() {
-if (audioUnlocked) return;
+const voiceEls = [];
+const voiceHistory = Array.from({ length: 6 }, () => []);
+const globalHistory = [];
+let prevSnapshot = null;
 
-try {
-await engine.init();
-if (engine.ctx && engine.ctx.state === “suspended”) {
-await engine.ctx.resume();
-}
-audioUnlocked = true;
-console.log(“✓ Audio unlocked for iOS”);
-} catch (err) {
-console.error(“Audio unlock failed:”, err);
-}
-}
-
-// ==========================================
-// DOM REFERENCES
-// ==========================================
-const startBtn = document.getElementById(“start”);
-const stopBtn = document.getElementById(“stop”);
-const nudgeBtn = document.getElementById(“nudge”);
-const statusSpan = document.getElementById(“status”);
-
-const bpmSlider = document.getElementById(“bpm”);
-const bpmValue = document.getElementById(“bpm-value”);
-const reverbSlider = document.getElementById(“reverb”);
-const reverbValue = document.getElementById(“reverb-value”);
-const delaySlider = document.getElementById(“delay”);
-const delayValue = document.getElementById(“delay-value”);
-const masterSlider = document.getElementById(“master”);
-const masterValue = document.getElementById(“master-value”);
-
-const voiceControlsContainer = document.getElementById(“voice-controls”);
-const voiceGrid = document.getElementById(“voice-grid”);
-const globalTrail = document.getElementById(“global-trail”);
-
-// ==========================================
-// INIT UI
-// ==========================================
-function initUI() {
-// Set initial slider values
-bpmSlider.value = engine.bpm;
-bpmValue.textContent = engine.bpm;
-
-reverbSlider.value = engine.reverbMix;
-reverbValue.textContent = engine.reverbMix.toFixed(2);
-
-delaySlider.value = engine.delayMix;
-delayValue.textContent = engine.delayMix.toFixed(2);
-
-masterSlider.value = 0.9;
-masterValue.textContent = “0.90”;
-
-// Build synth controls
-buildSynthControls();
-
-// Build voice state cards
-buildVoiceGrid();
-
-// Update status
-updateStatus();
+function setStatus(text) {
+  els.status.textContent = text;
 }
 
-// ==========================================
-// SYNTH CONTROLS
-// ==========================================
-function buildSynthControls() {
-const layout = engine.getSynthControlLayout();
-voiceControlsContainer.innerHTML = “”;
+function noteLabel(voice) {
+  return `${NOTE_NAMES[voice.noteIndex]}${voice.finalOctave}`;
+}
 
-for (const group of layout) {
-const groupEl = document.createElement(“div”);
-groupEl.className = “voice-control-group”;
+function bareNote(voice) {
+  return NOTE_NAMES[voice.noteIndex];
+}
 
-```
-const title = document.createElement("h3");
-title.textContent = group.label;
-groupEl.appendChild(title);
+function pushHistory(history, line) {
+  history.unshift(line);
+  if (history.length > 3) {
+    history.length = 3;
+  }
+}
 
-for (const control of group.controls) {
+function historyAt(history, idx) {
+  return history[idx] ?? "";
+}
+
+function cyclePhase12(cycleDisplay) {
+  return (cycleDisplay % 12) + 1;
+}
+
+function cycleZone(cycleDisplay) {
+  const phase = cyclePhase12(cycleDisplay);
+  if (phase <= 4) {
+    return "cycles 1-4: clustered";
+  }
+  if (phase <= 8) {
+    return "cycles 5-8: mid spread";
+  }
+  return "cycles 9-12: wide spread";
+}
+
+function directionSymbol(current, previous) {
+  if (current > previous) return "^";
+  if (current < previous) return "v";
+  return "-";
+}
+
+function createVoiceCard(meta) {
+  const card = document.createElement("article");
+  card.className = "voice-card";
+
+  const top = document.createElement("div");
+  top.className = "voice-top";
+
+  const id = document.createElement("strong");
+  id.className = "voice-id mono";
+  id.textContent = meta.id;
+
+  const role = document.createElement("span");
+  role.className = "voice-role";
+  role.textContent = meta.role;
+
+  top.append(id, role);
+
+  const circle = document.createElement("div");
+  circle.className = "voice-circle";
+
+  const note = document.createElement("span");
+  note.className = "voice-note";
+  note.textContent = "--";
+
+  circle.append(note);
+
+  const trail = document.createElement("div");
+  trail.className = "voice-trail mono";
+
+  const line0 = document.createElement("p");
+  line0.className = "trail-line trail-current";
+
+  const line1 = document.createElement("p");
+  line1.className = "trail-line trail-previous-1";
+
+  const line2 = document.createElement("p");
+  line2.className = "trail-line trail-previous-2";
+
+  trail.append(line0, line1, line2);
+
+  card.style.setProperty("--voice-outline", meta.color.outline);
+  card.style.setProperty("--voice-core", meta.color.core);
+  card.style.setProperty("--voice-glow", meta.color.glow);
+  card.style.setProperty("--voice-text", meta.color.text);
+
+  card.append(top, circle, trail);
+
+  return {
+    card,
+    circle,
+    note,
+    lines: [line0, line1, line2],
+  };
+}
+
+function buildVoiceGrid() {
+  for (let i = 0; i < VOICE_META.length; i += 1) {
+    const voiceCard = createVoiceCard(VOICE_META[i]);
+    voiceEls.push(voiceCard);
+    els.voiceGrid.append(voiceCard.card);
+  }
+}
+
+/**
+ * Updated to match audio-engine.js synth layouts:
+ * - Sparkle: shimmerTime is seconds, shimmerPitch is semitones, shimmerTone is Hz, etc.
+ */
+function formatControlValue(control, value) {
+  if (control.type === "select") return String(value);
+
+  const key = control.key ?? "";
+
+  // Hz-ish fields
+  if (key.includes("cutoff") || key.includes("Freq") || key.includes("Hz") || key.includes("Tone")) {
+    return `${Math.round(value)} Hz`;
+  }
+
+  // Explicit Hz rate fields
+  if (key.includes("vibratoRate") || key.includes("LfoRate") || key.includes("ModRate")) {
+    return `${Number(value).toFixed(2)} Hz`;
+  }
+
+  // Time (seconds) fields
+  if (
+    key.includes("attack") ||
+    key.includes("decay") ||
+    key.includes("release") ||
+    key.includes("gate") ||
+    key.includes("glide") ||
+    key.includes("Time") ||     // shimmerTime
+    key.includes("Sec")
+  ) {
+    return `${Number(value).toFixed(3)} s`;
+  }
+
+  // Semitone-ish fields
+  if (key.includes("Pitch")) {
+    return `${Math.round(value)} st`;
+  }
+
+  // Signed-ish depth/amount fields
+  if (key.includes("detune") || key.includes("Depth") || key.includes("nonLinearity")) {
+    return `${Number(value).toFixed(3)}`;
+  }
+
+  // Default: 3 decimals
+  return Number(value).toFixed(3);
+}
+
+function createEngineControlRow(engineId, control) {
   const row = document.createElement("div");
-  row.className = "control-row";
+  row.className = "param-row";
+
+  const meta = document.createElement("div");
+  meta.className = "param-meta";
+
+  const label = document.createElement("label");
+  label.textContent = control.label;
+
+  const readout = document.createElement("span");
+  readout.className = "param-value";
+  readout.textContent = formatControlValue(control, control.value);
+
+  meta.append(label, readout);
+  row.append(meta);
 
   if (control.type === "select") {
-    const label = document.createElement("label");
-    label.textContent = control.label;
-    
     const select = document.createElement("select");
-    select.dataset.synthId = group.id;
-    select.dataset.key = control.key;
-    
-    for (const opt of control.options) {
-      const option = document.createElement("option");
-      option.value = opt;
-      option.textContent = opt;
-      if (opt === control.value) {
-        option.selected = true;
-      }
-      select.appendChild(option);
+
+    for (const option of control.options ?? []) {
+      const opt = document.createElement("option");
+      opt.value = option;
+      opt.textContent = option;
+      if (option === control.value) opt.selected = true;
+      select.append(opt);
     }
-    
-    select.addEventListener("change", (e) => {
-      engine.setSynthParam(group.id, control.key, e.target.value);
+
+    select.addEventListener("change", () => {
+      readout.textContent = String(select.value);
+      engine.setSynthParam(engineId, control.key, select.value);
     });
-    
-    label.appendChild(select);
-    row.appendChild(label);
-  } else {
-    const label = document.createElement("label");
-    
-    const labelText = document.createElement("span");
-    labelText.textContent = control.label;
-    label.appendChild(labelText);
-    
-    const slider = document.createElement("input");
-    slider.type = "range";
-    slider.min = control.min;
-    slider.max = control.max;
-    slider.step = control.step;
-    slider.value = control.value;
-    slider.dataset.synthId = group.id;
-    slider.dataset.key = control.key;
-    label.appendChild(slider);
-    
-    const valueSpan = document.createElement("span");
-    valueSpan.className = "value";
-    valueSpan.textContent = formatValue(control.value, control.step);
-    label.appendChild(valueSpan);
-    
-    slider.addEventListener("input", (e) => {
-      const val = parseFloat(e.target.value);
-      engine.setSynthParam(group.id, control.key, val);
-      valueSpan.textContent = formatValue(val, control.step);
-    });
-    
-    row.appendChild(label);
+
+    row.append(select);
+    return row;
   }
-  
-  groupEl.appendChild(row);
+
+  const input = document.createElement("input");
+  input.type = "range";
+  input.min = String(control.min);
+  input.max = String(control.max);
+  input.step = String(control.step);
+  input.value = String(control.value);
+
+  input.addEventListener("input", () => {
+    const next = Number(input.value);
+    readout.textContent = formatControlValue(control, next);
+    engine.setSynthParam(engineId, control.key, next);
+  });
+
+  row.append(input);
+  return row;
 }
 
-voiceControlsContainer.appendChild(groupEl);
-```
+function buildSynthControls() {
+  const engines = engine.getSynthControlLayout();
 
-}
-}
+  for (const synth of engines) {
+    const card = document.createElement("article");
+    card.className = "param-card";
 
-function formatValue(value, step) {
-const decimals = step < 0.01 ? 4 : step < 0.1 ? 3 : step < 1 ? 2 : 0;
-return value.toFixed(decimals);
-}
+    const head = document.createElement("div");
+    head.className = "param-head";
 
-// ==========================================
-// VOICE GRID
-// ==========================================
-function buildVoiceGrid() {
-voiceGrid.innerHTML = “”;
+    const id = document.createElement("strong");
+    id.className = "param-id";
+    id.textContent = synth.id;
 
-for (let i = 0; i < 6; i++) {
-const card = document.createElement(“div”);
-card.className = “voice-card”;
-card.dataset.voice = i;
+    const role = document.createElement("span");
+    role.className = "param-role";
+    role.textContent = synth.label;
 
-```
-const title = document.createElement("h3");
-title.textContent = `V${i + 1}`;
-card.appendChild(title);
+    head.append(id, role);
+    card.append(head);
 
-const freq = document.createElement("div");
-freq.className = "freq";
-freq.textContent = "—";
-card.appendChild(freq);
+    for (const control of synth.controls) {
+      card.append(createEngineControlRow(synth.id, control));
+    }
 
-const note = document.createElement("div");
-note.className = "note";
-note.textContent = "";
-card.appendChild(note);
-
-voiceGrid.appendChild(card);
-```
-
-}
+    els.synthControls.append(card);
+  }
 }
 
-function updateVoiceGrid() {
-for (let i = 0; i < 6; i++) {
-const card = voiceGrid.querySelector(`[data-voice="${i}"]`);
-if (!card) continue;
+function buildVoiceLines(seq, previous, cycleDisplay) {
+  const voices = seq.voices;
+  const rootName = NOTE_NAMES[seq.rootChromatic];
+  const nextRoot = NOTE_NAMES[CIRCLE_OF_FIFTHS[(seq.rootCycleIndex + 1) % CIRCLE_OF_FIFTHS.length]];
 
-```
-const voice = engine.seq.voices[i];
-const freqEl = card.querySelector(".freq");
-const noteEl = card.querySelector(".note");
+  const v1 = voices[0];
+  const v2 = voices[1];
+  const v3 = voices[2];
+  const v4 = voices[3];
+  const v5 = voices[4];
+  const v6 = voices[5];
 
-if (voice.gate) {
-  card.classList.add("active");
-  freqEl.textContent = `${voice.freq.toFixed(1)} Hz`;
-  noteEl.textContent = freqToNote(voice.freq);
-} else {
-  card.classList.remove("active");
-  freqEl.textContent = "—";
-  noteEl.textContent = "";
+  const pV2 = previous ? previous.voices[1] : v2;
+  const pV4 = previous ? previous.voices[3] : v4;
+  const pV5 = previous ? previous.voices[4] : v5;
+  const pV6 = previous ? previous.voices[5] : v6;
+
+  const v5Move = directionSymbol(v5.degree, pV5.degree);
+  const v5DegreeDisplay = ((v5.degree % 7) + 7) % 7 + 1;
+
+  let mirrorRule = "no trigger";
+  if (v2.gate) {
+    if (v5Move === "^") {
+      mirrorRule = "v5 went ^ so v2 v";
+    } else if (v5Move === "v") {
+      mirrorRule = "v5 went v so v2 ^";
+    } else {
+      mirrorRule = "v5 held so v2 held";
+    }
+  }
+
+  let wanderRule = "hold";
+  if (v4.gate) {
+    const v3WasOn = v3.prevGate;
+    const v2WasOn = v2.prevGate;
+    if (v3WasOn && v2WasOn) {
+      wanderRule = "both on -> +1";
+    } else if (v3WasOn && !v2WasOn) {
+      wanderRule = "v3 on, v2 off -> -2";
+    } else if (!v3WasOn && v2WasOn) {
+      wanderRule = "v3 off, v2 on -> 0";
+    } else {
+      wanderRule = "both off -> +3";
+    }
+  }
+
+  const semitoneRead = Math.abs(v2.midiNote - v3.midiNote) % 12;
+  const octFlip = pV6.finalOctave !== v6.finalOctave ? "yes" : "no";
+
+  return [
+    `${noteLabel(v1)} | cycle ${cyclePhase12(cycleDisplay)}/12 | next: ${nextRoot}`,
+    `${noteLabel(v2)} | ${noteLabel(pV2)} -> ${noteLabel(v2)} | ${mirrorRule}`,
+    `${noteLabel(v3)} | 3rd of ${rootName}`,
+    `v3=${bareNote(v3)} v2=${bareNote(v2)} | ${semitoneRead}st | ${wanderRule} | ${noteLabel(pV4)} -> ${noteLabel(v4)}`,
+    `${noteLabel(v5)} | deg ${v5DegreeDisplay}/7 ${v5Move}`,
+    `echo v4 prev: ${noteLabel(pV4)} | oct flip: ${octFlip}`,
+  ];
 }
-```
 
-}
-}
-
-function freqToNote(freq) {
-const noteNames = [“C”, “C#”, “D”, “D#”, “E”, “F”, “F#”, “G”, “G#”, “A”, “A#”, “B”];
-const a4 = 440;
-const c0 = a4 * Math.pow(2, -4.75);
-const halfSteps = Math.round(12 * Math.log2(freq / c0));
-const octave = Math.floor(halfSteps / 12);
-const note = noteNames[halfSteps % 12];
-return `${note}${octave}`;
+function buildGlobalLine(seq, cycleDisplay) {
+  const count = cycleDisplay + 1;
+  const root = NOTE_NAMES[seq.rootChromatic];
+  return `cycle ${count} | root ${root} | zone ${cycleZone(cycleDisplay)}`;
 }
 
-// ==========================================
-// HISTORY TRAIL
-// ==========================================
-const history = [];
+function snapshot(seq) {
+  return {
+    cycle: seq.cycle,
+    rootChromatic: seq.rootChromatic,
+    rootCycleIndex: seq.rootCycleIndex,
+    voices: seq.voices.map((voice) => ({
+      noteIndex: voice.noteIndex,
+      finalOctave: voice.finalOctave,
+      midiNote: voice.midiNote,
+      degree: voice.degree,
+      gate: voice.gate,
+      prevGate: voice.prevGate,
+    })),
+  };
+}
 
-function updateHistory() {
-const state = {
-root: engine.seq.rootNote,
-register: engine.seq.turingRegister.toString(2).padStart(16, “0”),
-scale: engine.seq.currentScale.name,
+function render(seq, options = {}) {
+  const { commitHistory = false } = options;
+  const cycleDisplay = Math.max(0, seq.cycle - 1);
+
+  if (commitHistory) {
+    const lines = buildVoiceLines(seq, prevSnapshot, cycleDisplay);
+    for (let i = 0; i < lines.length; i += 1) {
+      pushHistory(voiceHistory[i], lines[i]);
+    }
+    pushHistory(globalHistory, buildGlobalLine(seq, cycleDisplay));
+  }
+
+  for (let i = 0; i < voiceEls.length; i += 1) {
+    const voice = seq.voices[i];
+    const ui = voiceEls[i];
+
+    ui.note.textContent = noteLabel(voice);
+    ui.circle.classList.toggle("active", voice.gate);
+
+    ui.lines[0].textContent = historyAt(voiceHistory[i], 0);
+    ui.lines[1].textContent = historyAt(voiceHistory[i], 1);
+    ui.lines[2].textContent = historyAt(voiceHistory[i], 2);
+  }
+
+  els.globalTrailLines[0].textContent = historyAt(globalHistory, 0);
+  els.globalTrailLines[1].textContent = historyAt(globalHistory, 1);
+  els.globalTrailLines[2].textContent = historyAt(globalHistory, 2);
+
+  prevSnapshot = snapshot(seq);
+}
+
+buildVoiceGrid();
+buildSynthControls();
+
+for (let i = 0; i < voiceHistory.length; i += 1) {
+  pushHistory(voiceHistory[i], "idle | awaiting cycle data");
+}
+pushHistory(globalHistory, "cycle 0 | root C | zone cycles 1-4: clustered");
+
+engine.onCycle = (seq) => {
+  render(seq, { commitHistory: true });
 };
 
-history.unshift(state);
-if (history.length > 3) {
-history.pop();
-}
-
-const lines = globalTrail.querySelectorAll(”.trail-line”);
-
-for (let i = 0; i < 3; i++) {
-if (history[i]) {
-const s = history[i];
-lines[i].textContent = `Root: ${s.root} | Register: ${s.register} | Scale: ${s.scale}`;
-} else {
-lines[i].textContent = “”;
-}
-}
-}
-
-// ==========================================
-// STATUS UPDATE
-// ==========================================
-function updateStatus() {
-if (engine.running) {
-statusSpan.textContent = “Running”;
-statusSpan.style.color = “var(–accent)”;
-} else if (audioUnlocked) {
-statusSpan.textContent = “Ready”;
-statusSpan.style.color = “var(–primary)”;
-} else {
-statusSpan.textContent = “Idle (tap Start to unlock audio)”;
-statusSpan.style.color = “var(–text-dim)”;
-}
-}
-
-// ==========================================
-// CONTROLS
-// ==========================================
-startBtn.addEventListener(“click”, async () => {
-// CRITICAL: Unlock audio on first user gesture
-await unlockAudio();
-
-await engine.start();
-
-startBtn.disabled = true;
-stopBtn.disabled = false;
-nudgeBtn.disabled = false;
-
-updateStatus();
-
-// Start UI update loop
-if (uiUpdateInterval) {
-clearInterval(uiUpdateInterval);
-}
-uiUpdateInterval = setInterval(() => {
-updateVoiceGrid();
-}, 100);
-
-// Register cycle callback
-engine.onCycle = () => {
-updateHistory();
-};
+els.start.addEventListener("click", async () => {
+  try {
+    setStatus("Starting audio engine...");
+    await engine.start();
+    setStatus("Running");
+    els.start.disabled = true;
+    els.stop.disabled = false;
+  } catch (err) {
+    setStatus(`Error: ${err.message}`);
+  }
 });
 
-stopBtn.addEventListener(“click”, () => {
-engine.stop();
-
-startBtn.disabled = false;
-stopBtn.disabled = true;
-nudgeBtn.disabled = true;
-
-updateStatus();
-
-if (uiUpdateInterval) {
-clearInterval(uiUpdateInterval);
-uiUpdateInterval = null;
-}
+els.stop.addEventListener("click", () => {
+  engine.stop();
+  setStatus("Stopped");
+  els.start.disabled = false;
+  els.stop.disabled = true;
 });
 
-nudgeBtn.addEventListener(“click”, () => {
-engine.seq.nudgeRoot();
-updateHistory();
+els.nudge.addEventListener("click", () => {
+  engine.seq.nudgeRoot();
+  render(engine.seq, { commitHistory: false });
 });
 
-bpmSlider.addEventListener(“input”, (e) => {
-const val = parseInt(e.target.value);
-engine.setBpm(val);
-bpmValue.textContent = val;
+els.bpm.addEventListener("input", () => {
+  const bpm = Number(els.bpm.value);
+  els.bpmValue.textContent = `${bpm}`;
+  engine.setBpm(bpm);
 });
 
-reverbSlider.addEventListener(“input”, (e) => {
-const val = parseFloat(e.target.value);
-engine.setReverbMix(val);
-reverbValue.textContent = val.toFixed(2);
+els.reverb.addEventListener("input", () => {
+  const value = Number(els.reverb.value);
+  els.reverbValue.textContent = value.toFixed(2);
+  engine.setReverbMix(value);
 });
 
-delaySlider.addEventListener(“input”, (e) => {
-const val = parseFloat(e.target.value);
-engine.setDelayMix(val);
-delayValue.textContent = val.toFixed(2);
+els.delay.addEventListener("input", () => {
+  const value = Number(els.delay.value);
+  els.delayValue.textContent = value.toFixed(2);
+  engine.setDelayMix(value);
 });
 
-masterSlider.addEventListener(“input”, (e) => {
-const val = parseFloat(e.target.value);
-engine.setMaster(val);
-masterValue.textContent = val.toFixed(2);
+els.master.addEventListener("input", () => {
+  const value = Number(els.master.value);
+  els.masterValue.textContent = value.toFixed(2);
+  engine.setMaster(value);
 });
 
-// ==========================================
-// INIT
-// ==========================================
-initUI();
+els.bpmValue.textContent = els.bpm.value;
+els.reverbValue.textContent = Number(els.reverb.value).toFixed(2);
+els.delayValue.textContent = Number(els.delay.value).toFixed(2);
+els.masterValue.textContent = Number(els.master.value).toFixed(2);
 
-// iOS wake lock (optional, prevents screen sleep during long sessions)
-if (“wakeLock” in navigator) {
-let wakeLock = null;
-startBtn.addEventListener(“click”, async () => {
-try {
-wakeLock = await navigator.wakeLock.request(“screen”);
-console.log(“✓ Screen wake lock active”);
-} catch (err) {
-// Wake lock not critical, ignore errors
-}
-});
-}
+render(engine.seq, { commitHistory: false });
+setStatus("Idle (click Start to unlock audio)");
