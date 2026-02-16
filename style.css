@@ -1,0 +1,82 @@
+:root {
+  --bg: #f4f6f8;
+  --text: #1f2937;
+  --muted: #6b7280;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 32px;
+  font-family: "Manrope", "Segoe UI", sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.site {
+  max-width: 880px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.intro {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.eyebrow {
+  font-size: 12px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.page-title {
+  margin: 0;
+  font-size: 32px;
+  font-weight: 600;
+}
+
+.page-desc {
+  margin: 0;
+  font-size: 16px;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.project-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 12px;
+}
+
+.project-link {
+  display: inline-block;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text);
+  text-decoration: none;
+}
+
+.project-link:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 720px) {
+  body {
+    padding: 20px;
+  }
+
+  .page-title {
+    font-size: 26px;
+  }
+}

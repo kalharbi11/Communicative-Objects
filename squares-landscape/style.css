@@ -5,16 +5,52 @@ body {
 }
 
 body {
-  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-  background: #fff;
-  color: #111;
+  font-family: "Manrope", "Segoe UI", sans-serif;
+  background: #f4f6f8;
+  color: #1f2937;
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.page-intro {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.home-link {
+  color: #1f2937;
+  text-decoration: none;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.home-link:hover {
+  text-decoration: underline;
+}
+
+.page-title {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 600;
+}
+
+.page-desc {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #6b7280;
+  max-width: 560px;
 }
 
 .layout {
   display: flex;
   flex-wrap: wrap;
   gap: 16px;
-  padding: 16px;
   align-items: flex-start;
   justify-content: center;
   max-width: 1680px;
@@ -82,9 +118,12 @@ canvas {
 }
 
 @media (max-width: 768px) {
+  body {
+    padding: 16px;
+  }
+
   .layout {
     gap: 12px;
-    padding: 12px;
   }
 
   .panel {
@@ -108,9 +147,12 @@ canvas {
 }
 
 @media (max-width: 480px) {
+  body {
+    padding: 12px;
+  }
+
   .layout {
     gap: 8px;
-    padding: 8px;
   }
 
   .label {
