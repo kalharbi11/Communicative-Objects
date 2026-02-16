@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Ambient Turing Machine - Web Harness</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <main class="layout">
+    <section class="hero">
+      <a class="home-link" href="../../index.html">Return to home</a>
+      <p class="kicker">Daisy Seed Preview Rig</p>
+      <h1>Ambient Turing Machine</h1>
+      <p class="subtitle">Sequencer logic mirrored from your Daisy firmware with matching engines: poly drone, shared sparkle pluck (V2/V4), shimmer pad, and continuous sample bed through delay + reverb.</p>
+      <div class="actions">
+        <button id="start">Start</button>
+        <button id="stop" disabled>Stop</button>
+        <button id="nudge">Nudge Root</button>
+      </div>
+      <p class="status">Status: <span id="status">Idle</span></p>
+    </section>
+
+    <section class="panel machine-status">
+      <h2>Global Status</h2>
+      <div id="global-trail" class="history-trail mono">
+        <p class="trail-line trail-current"></p>
+        <p class="trail-line trail-previous-1"></p>
+        <p class="trail-line trail-previous-2"></p>
+      </div>
+    </section>
+
+    <section class="panel controls">
+      <h2>Engine Controls</h2>
+      <label>
+        BPM
+        <input id="bpm" type="range" min="30" max="120" step="1" value="50">
+        <span id="bpm-value"></span>
+      </label>
+      <label>
+        Reverb Mix
+        <input id="reverb" type="range" min="0" max="1" step="0.01" value="0.34">
+        <span id="reverb-value"></span>
+      </label>
+      <label>
+        Delay Mix
+        <input id="delay" type="range" min="0" max="0.6" step="0.01" value="0.18">
+        <span id="delay-value"></span>
+      </label>
+      <label>
+        Master
+        <input id="master" type="range" min="0" max="1" step="0.01" value="0.90">
+        <span id="master-value"></span>
+      </label>
+    </section>
+
+    <section class="panel synth-controls">
+      <h2>Synth Engines</h2>
+      <p class="controls-note mono">Four live engines: poly drone (V1 V3 V5), shared sparkle pluck (V2 + V4), shimmer pad V6, sample bed.</p>
+      <div id="voice-controls" class="voice-controls-grid"></div>
+    </section>
+
+    <section class="panel voice-panel">
+      <h2>Voice State</h2>
+      <div id="voice-grid" class="voice-grid"></div>
+    </section>
+  </main>
+
+  <script type="module" src="./app.js"></script>
+</body>
+</html>

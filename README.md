@@ -6,6 +6,7 @@ Live site: `https://kalharbi11.github.io/Communicative-Objects/`
 - `index.html` is the homepage/menu in the repo root.
 - Each project lives in its own folder with its own `index.html`.
 - `noise-map/` is one project folder. Example URL: `https://kalharbi11.github.io/Communicative-Objects/noise-map/`
+- `ambient-turing-machine/` is included in this repo. Web URL: `https://kalharbi11.github.io/Communicative-Objects/ambient-turing-machine/web/`
 - `.nojekyll` disables the GitHub Pages build step so files are served as-is.
 
 **Troubleshooting Pages**
