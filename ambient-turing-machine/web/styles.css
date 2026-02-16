@@ -1,4 +1,3 @@
-
 :root {
   --bg-0: #0a1118;
   --bg-1: #111c28;
@@ -297,10 +296,17 @@ select {
   color: var(--voice-text, rgba(16, 32, 44, 0.52));
 }
 
+/* =========================================================
+   Synth controls
+   Updated to handle longer Sparkle/KS-Pluck parameter labels
+   ========================================================= */
+
+#voice-controls,
 .voice-controls-grid {
   display: grid;
   gap: 0.75rem;
   grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: start;
 }
 
 .param-card {
@@ -314,46 +320,67 @@ select {
   display: flex;
   justify-content: space-between;
   align-items: baseline;
+  gap: 0.6rem;
   margin-bottom: 0.58rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid rgba(173, 204, 230, 0.12);
 }
 
 .param-id {
   font-family: "IBM Plex Mono", monospace;
   font-size: 0.78rem;
   letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 
 .param-role {
   font-size: 0.7rem;
   color: rgba(217, 228, 239, 0.6);
+  text-align: right;
+  max-width: 52%;
 }
 
 .param-row {
   display: grid;
-  gap: 0.2rem;
-  margin-bottom: 0.45rem;
+  gap: 0.28rem;
+  margin-bottom: 0.52rem;
 }
 
 .param-row:last-child {
   margin-bottom: 0;
 }
 
+/* Make long labels (Sparkle shimmer fields etc.) wrap nicely */
 .param-row label {
   font-family: "IBM Plex Mono", monospace;
   font-size: 0.67rem;
   color: rgba(217, 228, 239, 0.78);
+  line-height: 1.18;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .param-meta {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: baseline;
+  gap: 0.6rem;
 }
 
 .param-value {
   font-family: "IBM Plex Mono", monospace;
   font-size: 0.64rem;
   color: rgba(217, 228, 239, 0.72);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.param-row input[type="range"] {
+  width: 100%;
+}
+
+.param-row select {
+  width: 100%;
 }
 
 @media (max-width: 980px) {
@@ -369,6 +396,7 @@ select {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  #voice-controls,
   .voice-controls-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -394,6 +422,7 @@ select {
     grid-template-columns: 1fr;
   }
 
+  #voice-controls,
   .voice-controls-grid {
     grid-template-columns: 1fr;
   }
