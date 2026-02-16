@@ -1,102 +1,101 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, viewport-fit=cover" />
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Ambient Turing Machine - Web Harness</title>
-
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link
-    href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap"
-    rel="stylesheet"
-  />
-
-  <!-- Make sure this matches your repo filename:
-       - If your file is "styles.css", keep it as-is.
-       - If your file is "style.css", change the href accordingly. -->
-  <link rel="stylesheet" href="./styles.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./styles.css">
 </head>
-
 <body>
-  <main class="layout">
-    <section class="hero">
-      <a class="home-link" href="../../index.html">Return to home</a>
-      <p class="kicker">Daisy Seed Preview Rig</p>
-      <h1>Ambient Turing Machine</h1>
-
-      <p class="subtitle">
-        Sequencer logic mirrored from your Daisy firmware with matching engines:
-        poly drone (V1 V3 V5), Karplus-Strong physical string pluck with integrated shimmer delay
-        (V2 + V4), string pad (V6), and a continuous sample bed feeding delay + reverb.
-      </p>
-
-      <div class="actions">
-        <button id="start">Start</button>
-        <button id="stop" disabled>Stop</button>
-        <button id="nudge">Nudge Root</button>
+  <main class="page">
+    <header class="topbar">
+      <div class="topbar-left">
+        <a class="home-link" href="../../index.html">Return to home</a>
+        <p class="kicker">Daisy Seed Preview Rig</p>
+        <h1>Ambient Turing Machine</h1>
+        <p class="subtitle">A web harness that mirrors your Daisy firmware: Turing sequencer + six voices (poly drone, sparkle pluck, shimmer pad, sample bed) through delay + reverb.</p>
       </div>
 
-      <p class="status">Status: <span id="status">Idle</span></p>
-    </section>
+      <div class="topbar-right">
+        <div class="actions">
+          <button id="start">Start</button>
+          <button id="stop" disabled>Stop</button>
+          <button id="nudge">Nudge Root</button>
+        </div>
+        <p class="status">Status: <span id="status">Idle</span></p>
+      </div>
+    </header>
 
-    <section class="panel machine-status">
-      <h2>Global Status</h2>
-      <div id="global-trail" class="history-trail mono">
-        <p class="trail-line trail-current"></p>
-        <p class="trail-line trail-previous-1"></p>
-        <p class="trail-line trail-previous-2"></p>
+    <!-- VISUALIZER FIRST (the landing experience) -->
+    <section class="visualizer" aria-label="Turing Sequencer Visualizer">
+      <div class="viz-head">
+        <h2 class="viz-title">Turing Sequencer</h2>
+        <p class="viz-hint mono">Six voices laid out in a single row; each circle shows the current note, with the rule/change trail underneath.</p>
+      </div>
+
+      <div class="voice-grid" id="voice-grid"></div>
+
+      <div class="global-trail-wrap">
+        <div class="global-trail-title mono">Global trail</div>
+        <div id="global-trail" class="history-trail mono">
+          <p class="trail-line trail-current"></p>
+          <p class="trail-line trail-previous-1"></p>
+          <p class="trail-line trail-previous-2"></p>
+        </div>
       </div>
     </section>
 
-    <section class="panel controls">
-      <h2>Engine Controls</h2>
-
-      <label>
-        BPM
-        <input id="bpm" type="range" min="30" max="120" step="1" value="50" />
-        <span id="bpm-value"></span>
-      </label>
-
-      <label>
-        Reverb Mix
-        <input id="reverb" type="range" min="0" max="1" step="0.01" value="0.34" />
-        <span id="reverb-value"></span>
-      </label>
-
-      <label>
-        Delay Mix
-        <input id="delay" type="range" min="0" max="0.6" step="0.01" value="0.18" />
-        <span id="delay-value"></span>
-      </label>
-
-      <label>
-        Master
-        <input id="master" type="range" min="0" max="1" step="0.01" value="0.90" />
-        <span id="master-value"></span>
-      </label>
+    <!-- DESCRIPTION SECOND -->
+    <section class="description" aria-label="Project Description">
+      <div class="desc-card">
+        <h2>What this is</h2>
+        <p>
+          This page is a minimal, performance-first “readout” for the Ambient Turing Machine: a six-voice generative sequencer whose
+          rules mutate over time (root movement, mirroring, wander, scale, echo). The UI is intentionally calm: circles are the instrument,
+          and the text below them is the trace.
+        </p>
+        <p class="mono subtle">
+          Tip: keep this open while tuning firmware; the goal is to match the feel of the hardware, not to become a full synth UI.
+        </p>
+      </div>
     </section>
 
-    <section class="panel synth-controls">
-      <h2>Synth Engines</h2>
+    <!-- PARAMETERS LAST (pushed to the bottom) -->
+    <section class="params" aria-label="Parameters">
+      <div class="params-grid">
+        <section class="panel controls">
+          <h2>Global</h2>
+          <label>
+            BPM
+            <input id="bpm" type="range" min="30" max="120" step="1" value="50">
+            <span id="bpm-value"></span>
+          </label>
+          <label>
+            Reverb Mix
+            <input id="reverb" type="range" min="0" max="1" step="0.01" value="0.34">
+            <span id="reverb-value"></span>
+          </label>
+          <label>
+            Delay Mix
+            <input id="delay" type="range" min="0" max="0.6" step="0.01" value="0.18">
+            <span id="delay-value"></span>
+          </label>
+          <label>
+            Master
+            <input id="master" type="range" min="0" max="1" step="0.01" value="0.90">
+            <span id="master-value"></span>
+          </label>
+        </section>
 
-      <p class="controls-note mono">
-        Four live engines:
-        Drone Poly (V1 V3 V5), KS Pluck (V2 + V4) with shimmer delay,
-        String Pad (V6), and Sample Bed. Sparkle uses a Karplus-Strong physical model
-        with an integrated shimmer feedback delay.
-      </p>
-
-      <!-- app.js targets #voice-controls directly -->
-      <div id="voice-controls" class="voice-controls-grid"></div>
-    </section>
-
-    <section class="panel voice-panel">
-      <h2>Voice State</h2>
-      <div id="voice-grid" class="voice-grid"></div>
+        <section class="panel synth-controls">
+          <h2>Voice Parameters</h2>
+          <p class="controls-note mono">Per-voice ranges + toggles. (UI is compact on purpose; the circles are the headline.)</p>
+          <div id="voice-controls" class="voice-controls-grid"></div>
+        </section>
+      </div>
     </section>
   </main>
 
