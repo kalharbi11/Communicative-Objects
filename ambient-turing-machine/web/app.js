@@ -130,8 +130,12 @@ function cycleZone(cycleDisplay) {
 }
 
 function directionSymbol(current, previous) {
-  if (current > previous) return "^";
-  if (current < previous) return "v";
+  if (current > previous) {
+    return "^";
+  }
+  if (current < previous) {
+    return "v";
+  }
   return "-";
 }
 
@@ -198,50 +202,25 @@ function buildVoiceGrid() {
   }
 }
 
-/**
- * Updated to match audio-engine.js synth layouts:
- * - Sparkle: shimmerTime is seconds, shimmerPitch is semitones, shimmerTone is Hz, etc.
- */
 function formatControlValue(control, value) {
-  if (control.type === "select") return String(value);
+  if (control.type === "select") {
+    return String(value);
+  }
 
-  const key = control.key ?? "";
-
-  // Hz-ish fields
-  if (key.includes("cutoff") || key.includes("Freq") || key.includes("Hz") || key.includes("Tone")) {
+  const key = control.key;
+  if (key.includes("cutoff") || key.includes("Freq") || key.includes("Hz")) {
     return `${Math.round(value)} Hz`;
   }
-
-  // Explicit Hz rate fields
-  if (key.includes("vibratoRate") || key.includes("LfoRate") || key.includes("ModRate")) {
-    return `${Number(value).toFixed(2)} Hz`;
+  if (key.includes("vibratoRate")) {
+    return `${value.toFixed(2)} Hz`;
   }
-
-  // Time (seconds) fields
-  if (
-    key.includes("attack") ||
-    key.includes("decay") ||
-    key.includes("release") ||
-    key.includes("gate") ||
-    key.includes("glide") ||
-    key.includes("Time") ||     // shimmerTime
-    key.includes("Sec")
-  ) {
-    return `${Number(value).toFixed(3)} s`;
+  if (key.includes("detune") || key.includes("Depth")) {
+    return `${value.toFixed(1)}`;
   }
-
-  // Semitone-ish fields
-  if (key.includes("Pitch")) {
-    return `${Math.round(value)} st`;
+  if (key.includes("attack") || key.includes("decay") || key.includes("release") || key.includes("gate") || key.includes("glide")) {
+    return `${value.toFixed(3)} s`;
   }
-
-  // Signed-ish depth/amount fields
-  if (key.includes("detune") || key.includes("Depth") || key.includes("nonLinearity")) {
-    return `${Number(value).toFixed(3)}`;
-  }
-
-  // Default: 3 decimals
-  return Number(value).toFixed(3);
+  return value.toFixed(3);
 }
 
 function createEngineControlRow(engineId, control) {
@@ -268,7 +247,9 @@ function createEngineControlRow(engineId, control) {
       const opt = document.createElement("option");
       opt.value = option;
       opt.textContent = option;
-      if (option === control.value) opt.selected = true;
+      if (option === control.value) {
+        opt.selected = true;
+      }
       select.append(opt);
     }
 

@@ -33,7 +33,3 @@ Then open:
 
 - Browser audio requires a user click to start.
 - Sound character is not bit-identical to DaisySP because browser DSP and DaisySP internals differ, but sequencing and engine roles are matched.
-- Daisy vendor repos are not included in this GitHub project copy. Use:
-  - `https://github.com/electro-smith/libDaisy`
-  - `https://github.com/electro-smith/DaisySP`
-  - `https://github.com/electro-smith/DaisyExamples`
