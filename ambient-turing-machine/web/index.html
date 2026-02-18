@@ -18,7 +18,6 @@
         <h1>Ambient Turing Machine</h1>
         <p class="subtitle">A web harness that mirrors your Daisy firmware: Turing sequencer + six voices (poly drone, sparkle pluck, shimmer pad, sample bed) through delay + reverb.</p>
       </div>
-
       <div class="topbar-right">
         <div class="actions">
           <button id="start">Start</button>
@@ -35,9 +34,7 @@
         <h2 class="viz-title">Turing Sequencer</h2>
         <p class="viz-hint mono">Six voices laid out in a single row; each circle shows the current note, with the rule/change trail underneath.</p>
       </div>
-
       <div class="voice-grid" id="voice-grid"></div>
-
       <div class="global-trail-wrap">
         <div class="global-trail-title mono">Global trail</div>
         <div id="global-trail" class="history-trail mono">
@@ -48,20 +45,47 @@
       </div>
     </section>
 
-    <!-- DESCRIPTION SECOND -->
-    <section class="description" aria-label="Project Description">
-      <div class="desc-card">
-        <h2>What this is</h2>
-        <p>
-          This page is a minimal, performance-first “readout” for the Ambient Turing Machine: a six-voice generative sequencer whose
-          rules mutate over time (root movement, mirroring, wander, scale, echo). The UI is intentionally calm: circles are the instrument,
-          and the text below them is the trace.
-        </p>
-        <p class="mono subtle">
-          Tip: keep this open while tuning firmware; the goal is to match the feel of the hardware, not to become a full synth UI.
-        </p>
-      </div>
+    <!-- ABSTRACT -->
+    <section class="abstract" aria-label="Abstract">
+      <p>Six voices, six independent timing cycles, zero randomness. The Turing Sequencer generates evolving ambient music through deterministic rules alone. Each circle represents a voice; each voice follows its own cycle length; the voices listen to each other and respond. The complexity you hear emerges from simple rules interacting over time—the same principle Alan Turing identified in his foundational work on computation. Watch the circles. Listen to how patterns form, dissolve, and return changed.</p>
     </section>
+
+    <!-- INFO SECTIONS -->
+    <div class="info-grid">
+      <section class="info-section" aria-label="What You're Seeing">
+        <h2>What You're Seeing</h2>
+        <p>Six circles, six voices. Each circle lights up when its voice is active and dims when silent. The text beneath each circle traces what that voice is doing: which note, which cycle position, which rule is currently in play.</p>
+        <p>The voices run on different timing cycles—12, 11, 13, 7, 17, and 8 steps respectively. These numbers share no common factors, which means the voices align differently on every repetition. A combination you hear now won't recur in exactly the same way for thousands of cycles. The music keeps moving because the math prevents it from settling.</p>
+      </section>
+
+      <section class="info-section" aria-label="The Idea Behind It">
+        <h2>The Idea Behind It</h2>
+        <p>Most generative music relies on randomness to create variation. A noise source makes unpredictable choices; a quantizer catches the results and forces them into a scale; the output sounds complex because the input was chaotic. The complexity comes from outside the system, injected through probability. The Turing Sequencer asks a different question: can deterministic rules alone—no randomness whatsoever—produce music that feels alive and unpredictable?</p>
+        <p>The name references Alan Turing, but not casually. In 1936, Turing described a theoretical device that would become the foundation of all modern computing. The machine is radically simple: an infinite tape divided into cells, a read/write head that examines one cell at a time, and a small set of rules that govern behavior. The head reads a symbol from the current cell, consults its current internal state, and based on that combination decides three things—what symbol to write, which direction to move (left or right), and which state to switch to next. Then it repeats. That's the entire mechanism.</p>
+        <p>What makes this profound is what Turing proved: this minimal apparatus is sufficient to compute anything that is computable. The power comes not from complexity in the mechanism but from the recursive application of simple rules to data the machine itself has modified. Each step changes the tape; the next step reads that changed tape; the output of one operation becomes the input for the next. Simple rules, applied recursively, produce behavior that can be arbitrarily complex. Crucially, the machine contains no randomness—the same tape and starting state always produce identical output—yet the behavior can be so intricate that predicting it without actually running the computation is, in general, impossible.</p>
+        <p>The Turing Sequencer translates this principle into musical structure. Each voice functions like a simple state machine: it reads the current state of the system (its own cycle position, the on/off status of specific other voices), applies a deterministic rule, and produces output. Voice 2 doesn't randomly decide to go silent; it checks whether Voice 5 is silent and responds accordingly. Voice 3 doesn't randomly choose a register; it reads Voice 2's state and shifts high or low based on what it finds. The rules are trivial in isolation. But because each voice operates on its own timing cycle, and because those cycles share no common factors, the combinations of states the voices encounter keep changing. The same rule produces different results depending on when it executes relative to everything else.</p>
+        <p>The project also draws from Brian Eno's tape-loop systems and Steve Reich's phasing pieces—works where the composer designs a system rather than writing notes, and the music composes itself through the system's operation. Eno's <em>Music for Airports</em> used tape loops of different lengths running simultaneously; because the lengths shared no common factors, the phrases never aligned the same way twice. Reich's <em>It's Gonna Rain</em> let two identical tape loops drift gradually out of phase, creating evolving interference patterns from a single repeated element. Both composers discovered that incommensurable cycles—timing relationships that never resolve to a common multiple—generate endless variation from fixed material.</p>
+        <p>The Turing Sequencer extends these ideas by adding the reactive logic Turing's work implies. Eno's loops were independent; they overlapped but didn't listen to each other. Reich's loops were identical; they drifted but didn't respond. Here, the voices actively read each other's states and modify their behavior accordingly. Voice 5's silence propagates through the system—silencing Voice 2, which silences Voice 4, which changes what Voice 6 echoes. The chain of consequences gives the system a quality closer to Turing's vision of interacting computational processes than to the parallel-but-separate loops of early generative music. The complexity isn't just from misaligned timing; it's from rules responding to the outputs of other rules, recursively, indefinitely.</p>
+      </section>
+
+      <section class="info-section" aria-label="How the Voices Work">
+        <h2>How the Voices Work</h2>
+        <p><strong>Voice 1</strong> holds the root note of the current key—the tonal anchor everything else relates to. It creates brief silences before key changes, a kind of breath in the harmonic rhythm.</p>
+        <p><strong>Voice 2</strong> plays chord tones with a brighter, more present sound. It watches Voice 5; when Voice 5 goes silent, Voice 2 follows.</p>
+        <p><strong>Voice 3</strong> carries the melody, drawing from a wider range of the scale. It responds to Voice 2: when Voice 2 is active, Voice 3 plays higher; when Voice 2 drops out, Voice 3 moves lower.</p>
+        <p><strong>Voice 4</strong> adds rhythmic punctuation—short, bright tones that only sound when Voice 2 is also active. A dependency chain: Voice 5's silence silences Voice 2, which silences Voice 4.</p>
+        <p><strong>Voice 5</strong> sustains long tones that fill out the harmonic space. Its pattern of activity and silence ripples through the other voices that watch it.</p>
+        <p><strong>Voice 6</strong> echoes Voice 3, transposed higher with a slower, string-like quality. The echo arrives on its own 8-step cycle, displaced from the original, creating a sense of space and memory in the sound.</p>
+      </section>
+
+      <section class="info-section" aria-label="Why It Sounds Alive">
+        <h2>Why It Sounds Alive</h2>
+        <p>No random number generators. No probability functions. Given the same starting point, the sequencer produces identical output every time. Yet it sounds unpredictable because the interaction of simple rules across misaligned cycles creates combinations no one designed. The complexity is emergent—it arises from the system, not from any single rule.</p>
+        <p>The different timbres help the ear distinguish voices: sustained drones, brighter plucked tones, slow string-like swells. But the musical interest comes from the sequencing logic, not the sounds themselves. The sounds are vessels; the system is the composition.</p>
+      </section>
+
+      
+    </div>
 
     <!-- PARAMETERS LAST (pushed to the bottom) -->
     <section class="params" aria-label="Parameters">
@@ -84,12 +108,36 @@
             <span id="delay-value"></span>
           </label>
           <label>
+            Delay Mod Rate
+            <input id="delay-mod-rate" type="range" min="0" max="1.0" step="0.001" value="0.12">
+            <span id="delay-mod-rate-value"></span>
+          </label>
+          <label>
+            Delay Mod Depth
+            <input id="delay-mod-depth" type="range" min="0" max="0.01" step="0.0001" value="0.0024">
+            <span id="delay-mod-depth-value"></span>
+          </label>
+          <label>
+            Shimmer Mix
+            <input id="shimmer" type="range" min="0" max="0.6" step="0.01" value="0.12">
+            <span id="shimmer-value"></span>
+          </label>
+          <label>
+            Shimmer Mod Rate
+            <input id="shimmer-mod-rate" type="range" min="0" max="1.0" step="0.001" value="0.22">
+            <span id="shimmer-mod-rate-value"></span>
+          </label>
+          <label>
+            Shimmer Mod Depth
+            <input id="shimmer-mod-depth" type="range" min="0" max="0.01" step="0.0001" value="0.0030">
+            <span id="shimmer-mod-depth-value"></span>
+          </label>
+          <label>
             Master
             <input id="master" type="range" min="0" max="1" step="0.01" value="0.90">
             <span id="master-value"></span>
           </label>
         </section>
-
         <section class="panel synth-controls">
           <h2>Voice Parameters</h2>
           <p class="controls-note mono">Per-voice ranges + toggles. (UI is compact on purpose; the circles are the headline.)</p>
@@ -98,7 +146,6 @@
       </div>
     </section>
   </main>
-
-  <script type="module" src="./app.js"></script>
+  <script type="module" src="./app.js?v=20260217a"></script>
 </body>
 </html>

@@ -1,5 +1,5 @@
 import { NOTE_NAMES } from "./sequencer.js";
-import { TuringAudioEngine } from "./audio-engine.js";
+import { TuringAudioEngine } from "./audio-engine.js?v=20260217a";
 
 const CIRCLE_OF_FIFTHS = [0, 7, 2, 9, 4, 11, 6, 1, 8, 3, 10, 5];
 
@@ -67,6 +67,18 @@ const VOICE_META = [
 ];
 
 const engine = new TuringAudioEngine();
+if (typeof window !== "undefined") {
+  window.engine = engine;
+  window.turingDebug = {
+    bypassDelayReverbSends(enabled = true) {
+      engine.setDebugBypassDelayReverbSends(!!enabled);
+      return engine.debugBypassDelayReverbSends;
+    },
+    get bypassDelayReverbSendsState() {
+      return engine.debugBypassDelayReverbSends;
+    },
+  };
+}
 
 const els = {
   start: document.querySelector("#start"),
@@ -79,6 +91,16 @@ const els = {
   reverbValue: document.querySelector("#reverb-value"),
   delay: document.querySelector("#delay"),
   delayValue: document.querySelector("#delay-value"),
+  delayModRate: document.querySelector("#delay-mod-rate"),
+  delayModRateValue: document.querySelector("#delay-mod-rate-value"),
+  delayModDepth: document.querySelector("#delay-mod-depth"),
+  delayModDepthValue: document.querySelector("#delay-mod-depth-value"),
+  shimmer: document.querySelector("#shimmer"),
+  shimmerValue: document.querySelector("#shimmer-value"),
+  shimmerModRate: document.querySelector("#shimmer-mod-rate"),
+  shimmerModRateValue: document.querySelector("#shimmer-mod-rate-value"),
+  shimmerModDepth: document.querySelector("#shimmer-mod-depth"),
+  shimmerModDepthValue: document.querySelector("#shimmer-mod-depth-value"),
   master: document.querySelector("#master"),
   masterValue: document.querySelector("#master-value"),
   voiceGrid: document.querySelector("#voice-grid"),
@@ -207,14 +229,15 @@ function formatControlValue(control, value) {
     return String(value);
   }
 
-  const key = control.key;
-  if (key.includes("cutoff") || key.includes("Freq") || key.includes("Hz")) {
+  const key = String(control.key).toLowerCase();
+  const label = String(control.label ?? "").toLowerCase();
+  if (key.includes("cutoff") || label.includes("hz")) {
     return `${Math.round(value)} Hz`;
   }
-  if (key.includes("vibratoRate")) {
+  if (key.includes("vibratorate")) {
     return `${value.toFixed(2)} Hz`;
   }
-  if (key.includes("detune") || key.includes("Depth")) {
+  if (key.includes("detune") || key.includes("depth")) {
     return `${value.toFixed(1)}`;
   }
   if (key.includes("attack") || key.includes("decay") || key.includes("release") || key.includes("gate") || key.includes("glide")) {
@@ -306,6 +329,11 @@ function buildSynthControls() {
 
     els.synthControls.append(card);
   }
+}
+
+function rebuildSynthControls() {
+  els.synthControls.innerHTML = "";
+  buildSynthControls();
 }
 
 function buildVoiceLines(seq, previous, cycleDisplay) {
@@ -421,7 +449,7 @@ function render(seq, options = {}) {
 }
 
 buildVoiceGrid();
-buildSynthControls();
+rebuildSynthControls();
 
 for (let i = 0; i < voiceHistory.length; i += 1) {
   pushHistory(voiceHistory[i], "idle | awaiting cycle data");
@@ -473,6 +501,42 @@ els.delay.addEventListener("input", () => {
   els.delayValue.textContent = value.toFixed(2);
   engine.setDelayMix(value);
 });
+if (els.delayModRate) {
+  els.delayModRate.addEventListener("input", () => {
+    const value = Number(els.delayModRate.value);
+    if (els.delayModRateValue) els.delayModRateValue.textContent = `${value.toFixed(3)} Hz`;
+    engine.setDelayModRate(value);
+  });
+}
+if (els.delayModDepth) {
+  els.delayModDepth.addEventListener("input", () => {
+    const value = Number(els.delayModDepth.value);
+    if (els.delayModDepthValue) els.delayModDepthValue.textContent = `${value.toFixed(4)} s`;
+    engine.setDelayModDepth(value);
+  });
+}
+if (els.shimmer) {
+  els.shimmer.addEventListener("input", () => {
+    const value = Number(els.shimmer.value);
+    if (els.shimmerValue) els.shimmerValue.textContent = value.toFixed(2);
+    engine.setShimmerMix(value);
+  });
+}
+if (els.shimmerModRate) {
+  els.shimmerModRate.addEventListener("input", () => {
+    const value = Number(els.shimmerModRate.value);
+    if (els.shimmerModRateValue) els.shimmerModRateValue.textContent = `${value.toFixed(3)} Hz`;
+    engine.setShimmerModRate(value);
+  });
+}
+if (els.shimmerModDepth) {
+  els.shimmerModDepth.addEventListener("input", () => {
+    const value = Number(els.shimmerModDepth.value);
+    if (els.shimmerModDepthValue) els.shimmerModDepthValue.textContent = `${value.toFixed(4)} s`;
+    engine.setShimmerModDepth(value);
+  });
+}
+
 
 els.master.addEventListener("input", () => {
   const value = Number(els.master.value);
@@ -483,6 +547,11 @@ els.master.addEventListener("input", () => {
 els.bpmValue.textContent = els.bpm.value;
 els.reverbValue.textContent = Number(els.reverb.value).toFixed(2);
 els.delayValue.textContent = Number(els.delay.value).toFixed(2);
+if (els.delayModRate && els.delayModRateValue) els.delayModRateValue.textContent = `${Number(els.delayModRate.value).toFixed(3)} Hz`;
+if (els.delayModDepth && els.delayModDepthValue) els.delayModDepthValue.textContent = `${Number(els.delayModDepth.value).toFixed(4)} s`;
+if (els.shimmer && els.shimmerValue) els.shimmerValue.textContent = Number(els.shimmer.value).toFixed(2);
+if (els.shimmerModRate && els.shimmerModRateValue) els.shimmerModRateValue.textContent = `${Number(els.shimmerModRate.value).toFixed(3)} Hz`;
+if (els.shimmerModDepth && els.shimmerModDepthValue) els.shimmerModDepthValue.textContent = `${Number(els.shimmerModDepth.value).toFixed(4)} s`;
 els.masterValue.textContent = Number(els.master.value).toFixed(2);
 
 render(engine.seq, { commitHistory: false });

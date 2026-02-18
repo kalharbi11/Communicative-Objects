@@ -51,6 +51,8 @@ function makeVoice() {
     octave: 3,
     gate: false,
     prevGate: false,
+    justOn: false,
+    justOff: false,
     active: false,
     noteIndex: 0,
     finalOctave: 0,
@@ -76,21 +78,23 @@ export class SequencerState {
     this.init();
   }
 
-  init() {
-    this.cycle = 0;
+  init(startCycle = 0) {
+    this.cycle = Math.max(0, Math.trunc(startCycle));
     this.frozenV2Degree = 4;
     this.frozenV4Degree = 5;
     this.frozenV6Degree = 3;
     this.prevV4DegreeForEcho = 5;
     this.v5History = [0, 0];
-    this.lastV2TriggerCycle = -100;
-    this.rootChromatic = 0;
-    this.rootCycleIndex = 0;
+    this.lastV2TriggerCycle = this.cycle - 100;
+    this.rootCycleIndex = Math.trunc(this.cycle / 12) % 12;
+    this.rootChromatic = CIRCLE_OF_FIFTHS[this.rootCycleIndex];
 
     for (let i = 0; i < 6; i += 1) {
       const v = this.voices[i];
       v.gate = false;
       v.prevGate = false;
+      v.justOn = false;
+      v.justOff = false;
       v.active = false;
       v.degree = 0;
       v.octave = 3;
@@ -136,10 +140,18 @@ export class SequencerState {
       gates[3] = true;
     }
 
-    gates[5] = (cycle % 4) === 0;
+    gates[5] = (cycle % 8) === 0;
+
+    // Guard against rare full-drop cycles where all six voices go silent.
+    if (!gates.some(Boolean)) {
+      gates[0] = true;
+    }
 
     for (let i = 0; i < 6; i += 1) {
-      this.voices[i].gate = gates[i];
+      const voice = this.voices[i];
+      voice.gate = gates[i];
+      voice.justOn = voice.gate && !voice.prevGate;
+      voice.justOff = !voice.gate && voice.prevGate;
     }
 
     this.voices[0].degree = 0;
