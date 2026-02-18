@@ -159,9 +159,9 @@ class DronePolySynth {
     this.params = {
       waveform: "sawtooth",
       attack: 3.5,
-      decay: 0.7,
+      decay: 3.8,
       sustain: 1.0,
-      release: 6.0,
+      release: 7.3,
       cutoff: 800,
       resonance: 0.15,
       detuneCents: 8,
