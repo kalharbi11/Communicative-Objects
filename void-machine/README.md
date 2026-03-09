@@ -4,6 +4,8 @@
 
 VOID MACHINE is a browser-based industrial noise instrument that combines generative audio synthesis with reactive WebGL visuals, optionally controlled by a custom hardware interface built with a Raspberry Pi Pico.
 
+![Controller](asset/controller.JPG)
+
 ---
 
 ## Overview
@@ -29,6 +31,10 @@ The system consists of three interconnected components:
 ### Matrix Wiring
 
 The controller uses a **3-row × 4-column scanning matrix** with diodes to prevent ghosting when multiple buttons are pressed simultaneously.
+
+![Keyboard Wiring 1](asset/keyboard%20wiring%201.JPG)
+
+![Keyboard Wiring 2](asset/keyboard%20wiring%202.JPG)
 
 ```
                     COLUMNS (Active-Low Read)
