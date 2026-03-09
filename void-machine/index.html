@@ -1,0 +1,1123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>VOID MACHINE</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;overflow:hidden;background:#000;color:#ccc;font-family:'Courier New',monospace}
+
+/* VHS Overlay — CSS only, zero JS cost */
+#vhsOverlay{position:fixed;inset:0;pointer-events:none;z-index:100;mix-blend-mode:screen}
+#vhsOverlay::before{content:'';position:absolute;inset:0;
+background:repeating-linear-gradient(0deg,rgba(255,255,255,0.015) 0px,rgba(255,255,255,0.015) 1px,transparent 1px,transparent 3px);
+animation:scanlineScroll 8s linear infinite}
+#vhsOverlay::after{content:'';position:absolute;inset:0;
+background:radial-gradient(ellipse at center,transparent 60%,rgba(0,0,0,0.5) 100%)}
+@keyframes scanlineScroll{0%{transform:translateY(0)}100%{transform:translateY(100%)}}
+
+/* Shake — CSS animations, triggered by class toggle */
+@keyframes shakeSmall{
+0%,100%{transform:translate(0)}
+10%{transform:translate(-2px,1px)}
+30%{transform:translate(3px,-2px)}
+50%{transform:translate(-1px,3px)}
+70%{transform:translate(2px,-1px)}
+90%{transform:translate(-3px,2px)}
+}
+@keyframes shakeHard{
+0%,100%{transform:translate(0)}
+10%{transform:translate(-6px,4px) rotate(-0.5deg)}
+20%{transform:translate(8px,-3px) rotate(0.5deg)}
+30%{transform:translate(-4px,6px) rotate(-0.3deg)}
+40%{transform:translate(5px,-5px) rotate(0.4deg)}
+50%{transform:translate(-7px,2px) rotate(-0.6deg)}
+60%{transform:translate(6px,-4px) rotate(0.3deg)}
+70%{transform:translate(-3px,7px) rotate(-0.4deg)}
+80%{transform:translate(4px,-6px) rotate(0.5deg)}
+90%{transform:translate(-5px,3px) rotate(-0.2deg)}
+}
+body.shaking{animation:shakeSmall 0.08s infinite}
+body.shaking-hard{animation:shakeHard 0.05s infinite}
+
+/* Glitch tear — CSS only */
+@keyframes glitchTear{
+0%{clip-path:inset(0 0 100% 0)}
+10%{clip-path:inset(30% 0 50% 0);transform:translateX(8px)}
+20%{clip-path:inset(60% 0 20% 0);transform:translateX(-12px)}
+30%{clip-path:inset(10% 0 70% 0);transform:translateX(5px)}
+40%{clip-path:inset(80% 0 5% 0);transform:translateX(-8px)}
+50%{clip-path:inset(45% 0 35% 0);transform:translateX(10px)}
+100%{clip-path:inset(0 0 100% 0)}
+}
+#glitchTear{position:fixed;inset:0;background:#fff;opacity:0;pointer-events:none;z-index:90;mix-blend-mode:difference}
+#glitchTear.active{opacity:0.12;animation:glitchTear 0.15s steps(3) infinite}
+
+#flashOverlay{position:fixed;inset:0;background:#fff;opacity:0;pointer-events:none;z-index:80;transition:opacity 0.05s}
+
+/* Layout */
+#app{display:flex;width:100%;height:100%;position:relative;z-index:1}
+
+#leftPanel{
+width:260px;min-width:260px;
+background:rgba(10,10,10,0.92);
+border-right:1px solid #222;
+display:flex;flex-direction:column;
+padding:12px;gap:10px;
+z-index:20;overflow-y:auto;
+backdrop-filter:blur(2px);
+}
+
+.panel-title{
+font-size:10px;letter-spacing:3px;text-transform:uppercase;
+color:#555;border-bottom:1px solid #222;padding-bottom:4px;margin-bottom:2px;
+}
+
+/* Button grid */
+.btn-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.syn-btn{
+background:#111;border:1px solid #333;color:#888;
+font-size:10px;letter-spacing:1px;padding:10px 4px;
+cursor:pointer;text-transform:uppercase;transition:all 0.05s;
+font-family:inherit;position:relative;overflow:hidden;
+}
+.syn-btn:hover{border-color:#555;color:#aaa}
+.syn-btn.active{background:#fff!important;color:#000!important;border-color:#fff!important}
+.syn-btn.locked{background:#888!important;color:#000!important;border-color:#aaa!important;box-shadow:0 0 4px #aaa}
+.syn-btn .key-hint{
+position:absolute;top:2px;right:4px;font-size:8px;color:#444;
+}
+
+/* Slider */
+.slider-row{display:flex;align-items:center;gap:8px;margin:2px 0}
+.slider-row label{font-size:9px;color:#555;width:50px;text-transform:uppercase;letter-spacing:1px}
+.slider-row input[type=range]{
+flex:1;-webkit-appearance:none;appearance:none;height:2px;background:#333;outline:none;
+}
+.slider-row input[type=range]::-webkit-slider-thumb{
+-webkit-appearance:none;width:10px;height:10px;background:#888;cursor:pointer;
+}
+
+/* Connection bar */
+.conn-row{display:flex;align-items:center;gap:8px;margin-bottom:4px}
+.conn-dot{width:8px;height:8px;border-radius:50%;background:#f44;flex-shrink:0;transition:background 0.3s}
+.conn-dot.on{background:#4f4;box-shadow:0 0 6px #4f4}
+.conn-dot.trying{background:#fa0;animation:pulse 0.6s infinite alternate}
+@keyframes pulse{0%{opacity:1}100%{opacity:0.3}}
+.conn-label{font-size:9px;color:#666;flex:1}
+.conn-label b{color:#aaa}
+.btn-conn{
+background:#222;color:#888;border:1px solid #333;border-radius:4px;
+padding:4px 8px;font-size:9px;font-family:inherit;cursor:pointer;
+}
+.btn-conn:hover{color:#fff;border-color:#555}
+.btn-conn.live{border-color:#4f4;color:#4f4}
+
+/* Status */
+#status{font-size:8px;color:#333;letter-spacing:1px;margin-top:auto;padding-top:8px;border-top:1px solid #181818}
+#miniLog{max-height:40px;overflow-y:auto;margin-top:4px}
+
+/* Viz canvas */
+#vizArea{flex:1;position:relative;background:#000}
+#vizCanvas{width:100%;height:100%;display:block}
+</style>
+</head>
+<body>
+<div id="vhsOverlay"></div>
+<div id="glitchTear"></div>
+<div id="flashOverlay"></div>
+
+<div id="app">
+<div id="leftPanel">
+  <div class="panel-title">VOID MACHINE</div>
+
+  <!-- Connection -->
+  <div class="conn-row">
+    <div class="conn-dot" id="connDot"></div>
+    <div class="conn-label" id="connLabel"><b>OFFLINE</b></div>
+    <button class="btn-conn" id="btnConn">CONNECT</button>
+  </div>
+
+  <div class="panel-title" style="margin-top:6px">NOISE SYNTHS</div>
+  <div class="btn-grid" id="noiseGrid">
+    <button class="syn-btn" data-btn="1">SCREECH<span class="key-hint">1</span></button>
+    <button class="syn-btn" data-btn="2">RUMBLE<span class="key-hint">2</span></button>
+    <button class="syn-btn" data-btn="3">SHRED<span class="key-hint">3</span></button>
+    <button class="syn-btn" data-btn="4">DRONE<span class="key-hint">4</span></button>
+  </div>
+
+  <div class="panel-title" style="margin-top:6px">SCREAM VOICES</div>
+  <div class="btn-grid" id="droneGrid">
+    <button class="syn-btn" data-btn="5">GROWL<span class="key-hint">Q</span></button>
+    <button class="syn-btn" data-btn="6">GUT<span class="key-hint">W</span></button>
+    <button class="syn-btn" data-btn="7">BARK<span class="key-hint">E</span></button>
+    <button class="syn-btn" data-btn="8">SCREAM<span class="key-hint">R</span></button>
+  </div>
+
+  <div class="panel-title" style="margin-top:6px">FX / DRUMS</div>
+  <div class="btn-grid" id="drumGrid">
+    <button class="syn-btn" data-btn="9">KICK<span class="key-hint">A</span></button>
+    <button class="syn-btn" data-btn="10">DETONATE<span class="key-hint">S</span></button>
+    <button class="syn-btn" data-btn="11">SLAM<span class="key-hint">D</span></button>
+    <button class="syn-btn" data-btn="12">CATACLYSM<span class="key-hint">F</span></button>
+  </div>
+
+  <div class="panel-title" style="margin-top:8px">MACRO</div>
+  <div class="slider-row"><label>FILTER</label><input type="range" id="potSlider" min="0" max="1023" value="512"></div>
+
+  <div id="status">
+    <div style="color:#444">KEYS: 1-4 noise · QWER scream · ASDF drums</div>
+    <div style="color:#333">Double-tap to latch · POT=filter</div>
+    <div id="miniLog"></div>
+  </div>
+
+  <a href="https://kalharbi11.github.io/Communicative-Objects/" class="btn-conn" style="display:block;text-align:center;text-decoration:none;margin-top:12px;padding:8px;border-color:#555;">← RETURN TO MAIN PAGE</a>
+</div>
+
+<div id="vizArea">
+  <canvas id="vizCanvas"></canvas>
+</div>
+</div>
+
+<script>
+// ════════════════════════════════════════════════════════════
+// VOID MACHINE — Merged: New Style + Original Audio Engine
+// WebGL Visualizer + Full Scream/Drum Synths + Pico Serial
+// ════════════════════════════════════════════════════════════
+
+// ─── CONFIGURATION ───
+const DOUBLE_TAP_MS = 280;
+const POT_MAX = 1023;
+const POT_EMA = 0.08;
+const POT_DEAD = 7;
+
+// ─── GLOBALS ───
+let W, H;
+const vizCanvas = document.getElementById('vizCanvas');
+let gl;
+
+// ─── BUTTON STATE ───
+const btn = {};
+for (let i = 1; i <= 12; i++) {
+  btn[i] = { 
+    active: false, locked: false, physHeld: false,
+    envelope: 0, envTarget: 0, 
+    envAttack: 0.05, envRelease: 0.15,
+    lastPress: 0, voiceId: null
+  };
+}
+// Drum envelopes are one-shot with longer tails
+[9,10,11,12].forEach(i => { btn[i].envAttack = 0.01; btn[i].envRelease = 1.5; });
+// Screams have slower attack
+[5,6,7,8].forEach(i => { btn[i].envAttack = 0.18; btn[i].envRelease = 0.5; });
+// Noise
+[1,2,3,4].forEach(i => { btn[i].envAttack = 0.04; btn[i].envRelease = 0.12; });
+
+// Accumulators
+let noiseAccum = 0, droneAccum = 0, drumAccum = 0;
+let shakeIntensity = 0, tearIntensity = 0, flashIntensity = 0, globalDistort = 0;
+let potNorm = 0.5, potSmoothed = 0, potAnchor = -1, potDispPct = -1;
+let frameCount = 0;
+
+// Serial state
+let port = null, reader = null, readActive = false;
+
+// ═══════════════════════════════════════════════════════════════
+//  AUDIO ENGINE (Full Original — Scream Voices + Industrial Drums)
+// ═══════════════════════════════════════════════════════════════
+let actx = null, masterGain = null, masterFilter = null, masterDist = null;
+let compressor = null, convolver = null, screamReverb = null;
+let whiteNoise = null, pinkNoise = null, brownNoise = null;
+const activeVoices = new Map();
+
+function getCtx() {
+  if (!actx) actx = new AudioContext({ sampleRate: 44100 });
+  if (actx.state === 'suspended') actx.resume();
+  return actx;
+}
+
+function makeDistCurve(amt) {
+  const n = 44100, c = new Float32Array(n), d = Math.PI / 180;
+  for (let i = 0; i < n; i++) { const x = i * 2 / n - 1; c[i] = (3 + amt) * x * 20 * d / (Math.PI + amt * Math.abs(x)); }
+  return c;
+}
+function makeHardClip(drive) {
+  const n = 8192, c = new Float32Array(n);
+  for (let i = 0; i < n; i++) { const x = i * 2 / n - 1; c[i] = Math.tanh(x * drive); }
+  return c;
+}
+function makeAsymClip(drive) {
+  const n = 8192, c = new Float32Array(n);
+  for (let i = 0; i < n; i++) { const x = i * 2 / n - 1; c[i] = x >= 0 ? Math.tanh(x * drive * 0.8) : Math.tanh(x * drive * 1.2); }
+  return c;
+}
+function makeReverbBuf(ac, dur, dec) {
+  const len = ac.sampleRate * dur, b = ac.createBuffer(2, len, ac.sampleRate);
+  for (let ch = 0; ch < 2; ch++) { const d = b.getChannelData(ch); for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, dec); }
+  return b;
+}
+function makeNoiseBuf(ac, type) {
+  const len = ac.sampleRate * 2, b = ac.createBuffer(1, len, ac.sampleRate), d = b.getChannelData(0);
+  if (type === 'white') { for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1; }
+  else if (type === 'pink') {
+    let b0=0,b1=0,b2=0,b3=0,b4=0,b5=0,b6=0;
+    for (let i = 0; i < len; i++) { const w = Math.random()*2-1; b0=.99886*b0+w*.0555179; b1=.99332*b1+w*.0750759;
+    b2=.969*b2+w*.153852; b3=.8665*b3+w*.3104856; b4=.55*b4+w*.5329522; b5=-.7616*b5-w*.016898;
+    d[i]=(b0+b1+b2+b3+b4+b5+b6+w*.5362)*.11; b6=w*.115926; }
+  } else { let last=0; for (let i = 0; i < len; i++) { const w = Math.random()*2-1; d[i]=(last+.02*w)/1.02; last=d[i]; d[i]*=3.5; } }
+  return b;
+}
+function toMaster(node) { if (masterFilter) node.connect(masterFilter); }
+
+function initAudio() {
+  const ac = getCtx();
+  whiteNoise = makeNoiseBuf(ac, 'white'); pinkNoise = makeNoiseBuf(ac, 'pink'); brownNoise = makeNoiseBuf(ac, 'brown');
+  compressor = ac.createDynamicsCompressor(); compressor.threshold.value = -20; compressor.knee.value = 6;
+  compressor.ratio.value = 12; compressor.attack.value = 0.003; compressor.release.value = 0.15;
+  masterDist = ac.createWaveShaper(); masterDist.curve = makeDistCurve(20); masterDist.oversample = '4x';
+  masterFilter = ac.createBiquadFilter(); masterFilter.type = 'lowpass'; masterFilter.frequency.value = 8000; masterFilter.Q.value = 2;
+  convolver = ac.createConvolver(); convolver.buffer = makeReverbBuf(ac, 4, 2);
+  screamReverb = ac.createConvolver(); screamReverb.buffer = makeReverbBuf(ac, 5, 1.5);
+  masterGain = ac.createGain(); masterGain.gain.value = 0.7;
+  const dry = ac.createGain(); dry.gain.value = 0.7;
+  const wet = ac.createGain(); wet.gain.value = 0.35;
+  masterFilter.connect(masterDist); masterDist.connect(compressor);
+  compressor.connect(dry); compressor.connect(convolver); convolver.connect(wet);
+  dry.connect(masterGain); wet.connect(masterGain); masterGain.connect(ac.destination);
+}
+
+// ── NOISE SYNTHS (buttons 1-4) ──
+const NOISE_CFG = [
+  {type:'white',fFreq:1200,Q:12,dist:100,lp:3000},
+  {type:'pink', fFreq:250, Q:8, dist:60, lp:1500},
+  {type:'white',fFreq:3000,Q:18,dist:200,lp:5000},
+  {type:'brown',fFreq:100, Q:4, dist:40, lp:800},
+];
+
+function startNoise(idx) {
+  const ac = getCtx(), id = 'n'+idx+'-'+Date.now(), c = NOISE_CFG[idx], now = ac.currentTime;
+  const bufs = {white:whiteNoise, pink:pinkNoise, brown:brownNoise};
+  const src = ac.createBufferSource(); src.buffer = bufs[c.type]; src.loop = true;
+  const f = ac.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = c.fFreq; f.Q.value = c.Q;
+  const lfo = ac.createOscillator(); lfo.frequency.value = 0.3 + Math.random() * 0.5;
+  const lfoG = ac.createGain(); lfoG.gain.value = c.fFreq * 0.4; lfo.connect(lfoG); lfoG.connect(f.frequency);
+  const d = ac.createWaveShaper(); d.curve = makeDistCurve(c.dist); d.oversample = '4x';
+  const lp = ac.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = c.lp; lp.Q.value = 2;
+  const g = ac.createGain(); g.gain.setValueAtTime(0, now); g.gain.linearRampToValueAtTime(0.22, now + 0.08);
+  const pf = ac.createBiquadFilter(); pf.type = 'peaking'; pf.frequency.value = c.fFreq * 1.2; pf.Q.value = 2; pf.gain.value = 6;
+  src.connect(f); f.connect(d); d.connect(lp); lp.connect(pf); pf.connect(g); toMaster(g);
+  src.start(now); lfo.start(now);
+  const stop = () => { const t = ac.currentTime; g.gain.cancelScheduledValues(t); g.gain.setValueAtTime(g.gain.value, t);
+    g.gain.linearRampToValueAtTime(0, t + 0.15); setTimeout(() => { try{src.stop();}catch{} try{lfo.stop();}catch{} }, 200); activeVoices.delete(id); };
+  activeVoices.set(id, {stop}); return id;
+}
+
+// ── SCREAM / DRONE VOICES (buttons 5-8) ──
+const SCREAM_V = [
+  {pitch:65,nmix:0.35,formants:[{f:550,fe:700,Q:16,g:1},{f:900,fe:1150,Q:14,g:0.8},{f:2400,fe:2600,Q:10,g:0.4},{f:3200,fe:3400,Q:8,g:0.25},{f:4500,fe:4500,Q:6,g:0.1}],
+   subG:0.25,drv:60,lpF:4500,A:0.4,D:0.3,S:0.25,R:1.2},
+  {pitch:90,nmix:0.4,formants:[{f:650,fe:850,Q:15,g:1},{f:1050,fe:1350,Q:13,g:0.85},{f:2600,fe:2900,Q:10,g:0.45},{f:3400,fe:3600,Q:8,g:0.3},{f:4800,fe:4800,Q:6,g:0.12}],
+   subG:0.18,drv:75,lpF:5500,A:0.35,D:0.25,S:0.26,R:1.0},
+  {pitch:120,nmix:0.45,formants:[{f:750,fe:1000,Q:14,g:1},{f:1150,fe:1500,Q:12,g:0.9},{f:2700,fe:3100,Q:10,g:0.5},{f:3500,fe:3800,Q:8,g:0.35},{f:4900,fe:5000,Q:6,g:0.15}],
+   subG:0.12,drv:90,lpF:6000,A:0.3,D:0.2,S:0.27,R:0.8},
+  {pitch:155,nmix:0.5,formants:[{f:850,fe:1100,Q:13,g:1},{f:1250,fe:1650,Q:11,g:0.9},{f:2800,fe:3200,Q:9,g:0.55},{f:3600,fe:4000,Q:7,g:0.35},{f:4950,fe:5100,Q:5,g:0.15}],
+   subG:0.08,drv:110,lpF:6500,A:0.25,D:0.2,S:0.28,R:0.7},
+];
+
+function startScream(vi) {
+  const ac = getCtx(), id = 's'+vi+'-'+Date.now(), v = SCREAM_V[vi], now = ac.currentTime;
+  const oscMix = ac.createGain(); oscMix.gain.value = 1 - v.nmix;
+  const oscs = [];
+  for (let i = 0; i < 3; i++) { const o = ac.createOscillator(); o.type = 'sawtooth'; o.frequency.value = v.pitch * (1 + (i-1) * 0.006);
+    const g = ac.createGain(); g.gain.value = 0.33; o.connect(g); g.connect(oscMix); oscs.push(o); }
+  const ns = ac.createBufferSource(); ns.buffer = whiteNoise; ns.loop = true;
+  const nmg = ac.createGain(); nmg.gain.value = v.nmix; ns.connect(nmg);
+  const subO = ac.createOscillator(); subO.type = 'sawtooth'; subO.frequency.value = v.pitch * 0.5;
+  const subG = ac.createGain(); subG.gain.value = v.subG; subO.connect(subG);
+  const sMix = ac.createGain(); sMix.gain.value = 1; oscMix.connect(sMix); nmg.connect(sMix); subG.connect(sMix);
+  const fMix = ac.createGain(); fMix.gain.value = 1;
+  const fFilts = [];
+  v.formants.forEach(ff => { const bp = ac.createBiquadFilter(); bp.type = 'bandpass'; bp.Q.value = ff.Q;
+    bp.frequency.setValueAtTime(ff.f, now); bp.frequency.linearRampToValueAtTime(ff.fe, now + 0.6);
+    bp.frequency.setTargetAtTime(ff.fe * 0.95, now + 0.8, 0.8); fFilts.push(bp);
+    const fg = ac.createGain(); fg.gain.value = ff.g * 0.4; sMix.connect(bp); bp.connect(fg); fg.connect(fMix); });
+  const preB = ac.createBiquadFilter(); preB.type = 'peaking'; preB.frequency.value = v.formants[1].fe; preB.Q.value = 1.5; preB.gain.value = 18;
+  const d1 = ac.createWaveShaper(); d1.curve = makeAsymClip(v.drv); d1.oversample = '4x';
+  const intEq = ac.createBiquadFilter(); intEq.type = 'peaking'; intEq.frequency.value = 3000; intEq.Q.value = 1; intEq.gain.value = 8;
+  const d2 = ac.createWaveShaper(); d2.curve = makeHardClip(v.drv * 0.8); d2.oversample = '4x';
+  const d3 = ac.createWaveShaper(); d3.curve = makeDistCurve(v.drv * 1.2); d3.oversample = '2x';
+  const hp = ac.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 80; hp.Q.value = 0.7;
+  const postLp = ac.createBiquadFilter(); postLp.type = 'lowpass'; postLp.frequency.value = v.lpF; postLp.Q.value = 0.7;
+  const presB = ac.createBiquadFilter(); presB.type = 'peaking'; presB.frequency.value = 3000; presB.Q.value = 2; presB.gain.value = 5;
+  const peak = 0.30, susLvl = peak * v.S / 0.3;
+  const ampEnv = ac.createGain(); ampEnv.gain.setValueAtTime(0, now);
+  ampEnv.gain.linearRampToValueAtTime(peak, now + v.A); ampEnv.gain.linearRampToValueAtTime(susLvl, now + v.A + v.D);
+  const revSnd = ac.createGain(); revSnd.gain.value = 0.2;
+  fMix.connect(preB); preB.connect(d1); d1.connect(intEq); intEq.connect(d2); d2.connect(d3);
+  d3.connect(hp); hp.connect(postLp); postLp.connect(presB); presB.connect(ampEnv);
+  toMaster(ampEnv);
+  if (screamReverb && masterFilter) { ampEnv.connect(revSnd); revSnd.connect(screamReverb); screamReverb.connect(masterFilter); }
+  oscs.forEach(o => o.start(now)); ns.start(now); subO.start(now);
+  const stop = () => { const t = ac.currentTime; ampEnv.gain.cancelScheduledValues(t); ampEnv.gain.setValueAtTime(ampEnv.gain.value, t);
+    ampEnv.gain.linearRampToValueAtTime(0, t + v.R);
+    fFilts.forEach((bp, i) => { bp.frequency.cancelScheduledValues(t); bp.frequency.setValueAtTime(bp.frequency.value, t);
+      bp.frequency.linearRampToValueAtTime(v.formants[i].f, t + v.R); });
+    setTimeout(() => { oscs.forEach(o => { try{o.stop();}catch{} }); try{ns.stop();}catch{} try{subO.stop();}catch{} }, v.R * 1000 + 100);
+    activeVoices.delete(id); };
+  activeVoices.set(id, {stop}); return id;
+}
+
+// ── DRUMS / FX (buttons 9-12) ──
+function triggerDrum(di) {
+  const ac = getCtx(), now = ac.currentTime;
+  switch(di) {
+    case 0: { // SEISMIC KICK
+      const o = ac.createOscillator(); o.type = 'sine'; o.frequency.setValueAtTime(200, now); o.frequency.exponentialRampToValueAtTime(25, now+1.5); o.frequency.exponentialRampToValueAtTime(15, now+3);
+      const s1 = ac.createOscillator(); s1.type = 'sine'; s1.frequency.setValueAtTime(100, now); s1.frequency.exponentialRampToValueAtTime(18, now+2.5);
+      const s2 = ac.createOscillator(); s2.type = 'triangle'; s2.frequency.setValueAtTime(50, now); s2.frequency.exponentialRampToValueAtTime(12, now+3);
+      const ck = ac.createOscillator(); ck.type = 'square'; ck.frequency.setValueAtTime(3000, now); ck.frequency.exponentialRampToValueAtTime(80, now+0.03);
+      const ckG = ac.createGain(); ckG.gain.setValueAtTime(0.5, now); ckG.gain.exponentialRampToValueAtTime(0.001, now+0.04);
+      const d = ac.createWaveShaper(); d.curve = makeDistCurve(80); d.oversample = '4x';
+      const bG = ac.createGain(); bG.gain.setValueAtTime(0.7, now); bG.gain.setValueAtTime(0.65, now+0.1); bG.gain.exponentialRampToValueAtTime(0.001, now+3.5);
+      const s1G = ac.createGain(); s1G.gain.setValueAtTime(0.5, now); s1G.gain.exponentialRampToValueAtTime(0.001, now+3);
+      const s2G = ac.createGain(); s2G.gain.setValueAtTime(0.3, now); s2G.gain.exponentialRampToValueAtTime(0.001, now+3.5);
+      const ns = ac.createBufferSource(); ns.buffer = brownNoise; ns.playbackRate.setValueAtTime(0.8, now); ns.playbackRate.exponentialRampToValueAtTime(0.2, now+2);
+      const nG = ac.createGain(); nG.gain.setValueAtTime(0.25, now); nG.gain.exponentialRampToValueAtTime(0.001, now+2.5);
+      const nF = ac.createBiquadFilter(); nF.type = 'lowpass'; nF.frequency.setValueAtTime(500, now); nF.frequency.exponentialRampToValueAtTime(60, now+2);
+      const nD = ac.createWaveShaper(); nD.curve = makeDistCurve(60);
+      o.connect(d); d.connect(bG); s1.connect(s1G); s2.connect(s2G); ck.connect(ckG); ns.connect(nF); nF.connect(nD); nD.connect(nG);
+      [bG, s1G, s2G, ckG, nG].forEach(n => toMaster(n));
+      [o, s1, s2, ck, ns].forEach(n => n.start(now)); o.stop(now+3.5); s1.stop(now+3); s2.stop(now+3.5); ck.stop(now+0.05); ns.stop(now+2.5);
+    } break;
+    case 1: { // INDUSTRIAL DETONATION
+      const ns = ac.createBufferSource(); ns.buffer = whiteNoise; ns.playbackRate.setValueAtTime(2, now); ns.playbackRate.exponentialRampToValueAtTime(0.5, now+1.5);
+      const d1 = ac.createWaveShaper(); d1.curve = makeDistCurve(120); d1.oversample = '4x';
+      const d2 = ac.createWaveShaper(); d2.curve = makeHardClip(30);
+      const nF = ac.createBiquadFilter(); nF.type = 'bandpass'; nF.Q.value = 5; nF.frequency.setValueAtTime(6000, now); nF.frequency.exponentialRampToValueAtTime(300, now+2);
+      const nG = ac.createGain(); nG.gain.setValueAtTime(0.45, now); nG.gain.exponentialRampToValueAtTime(0.001, now+2.5);
+      const t = ac.createOscillator(); t.type = 'sawtooth'; t.frequency.setValueAtTime(400, now); t.frequency.exponentialRampToValueAtTime(80, now+0.5);
+      const tD = ac.createWaveShaper(); tD.curve = makeDistCurve(80);
+      const tG = ac.createGain(); tG.gain.setValueAtTime(0.35, now); tG.gain.exponentialRampToValueAtTime(0.001, now+1.5);
+      const bm = ac.createOscillator(); bm.type = 'sine'; bm.frequency.setValueAtTime(80, now); bm.frequency.exponentialRampToValueAtTime(20, now+2);
+      const bmG = ac.createGain(); bmG.gain.setValueAtTime(0.4, now); bmG.gain.exponentialRampToValueAtTime(0.001, now+2.5);
+      ns.connect(nF); nF.connect(d1); d1.connect(d2); d2.connect(nG); t.connect(tD); tD.connect(tG); bm.connect(bmG);
+      [nG, tG, bmG].forEach(n => toMaster(n));
+      ns.start(now); t.start(now); bm.start(now); ns.stop(now+2.5); t.stop(now+1.5); bm.stop(now+2.5);
+    } break;
+    case 2: { // TECTONIC SLAM
+      const imp = ac.createBufferSource(); imp.buffer = whiteNoise; imp.playbackRate.setValueAtTime(1.2, now); imp.playbackRate.exponentialRampToValueAtTime(0.15, now+2);
+      const iD = ac.createWaveShaper(); iD.curve = makeDistCurve(200); iD.oversample = '4x';
+      const iF = ac.createBiquadFilter(); iF.type = 'lowpass'; iF.frequency.setValueAtTime(8000, now); iF.frequency.exponentialRampToValueAtTime(100, now+2.5); iF.Q.value = 4;
+      const iG = ac.createGain(); iG.gain.setValueAtTime(0.5, now); iG.gain.exponentialRampToValueAtTime(0.001, now+3);
+      [55, 77, 113, 167].forEach((f, i) => { const o = ac.createOscillator(); o.type = i%2===0 ? 'sawtooth' : 'square';
+        o.frequency.setValueAtTime(f*2, now); o.frequency.exponentialRampToValueAtTime(f*0.5, now+2.5);
+        const gD = ac.createWaveShaper(); gD.curve = makeDistCurve(100+i*30);
+        const gG = ac.createGain(); gG.gain.setValueAtTime(0.12, now); gG.gain.exponentialRampToValueAtTime(0.001, now+2+i*0.3);
+        o.connect(gD); gD.connect(gG); toMaster(gG); o.start(now); o.stop(now+2.5+i*0.3); });
+      const sub = ac.createOscillator(); sub.type = 'sine'; sub.frequency.setValueAtTime(50, now); sub.frequency.exponentialRampToValueAtTime(12, now+3);
+      const sG = ac.createGain(); sG.gain.setValueAtTime(0.5, now); sG.gain.exponentialRampToValueAtTime(0.001, now+3.5);
+      imp.connect(iF); iF.connect(iD); iD.connect(iG); sub.connect(sG); toMaster(iG); toMaster(sG);
+      imp.start(now); sub.start(now); imp.stop(now+3); sub.stop(now+3.5);
+    } break;
+    case 3: { // CATACLYSM
+      const ns = ac.createBufferSource(); ns.buffer = whiteNoise; ns.playbackRate.setValueAtTime(2, now); ns.playbackRate.exponentialRampToValueAtTime(0.1, now+2.5);
+      const d1 = ac.createWaveShaper(); d1.curve = makeDistCurve(150); d1.oversample = '4x';
+      const d2 = ac.createWaveShaper(); d2.curve = makeHardClip(50);
+      const d3 = ac.createWaveShaper(); d3.curve = makeDistCurve(100);
+      const nF = ac.createBiquadFilter(); nF.type = 'lowpass'; nF.frequency.setValueAtTime(12000, now); nF.frequency.exponentialRampToValueAtTime(80, now+3); nF.Q.value = 3;
+      const nG = ac.createGain(); nG.gain.setValueAtTime(0.5, now); nG.gain.exponentialRampToValueAtTime(0.001, now+4);
+      const bm = ac.createOscillator(); bm.type = 'sine'; bm.frequency.setValueAtTime(80, now); bm.frequency.exponentialRampToValueAtTime(10, now+3);
+      const bmD = ac.createWaveShaper(); bmD.curve = makeDistCurve(40);
+      const bmG = ac.createGain(); bmG.gain.setValueAtTime(0.6, now); bmG.gain.exponentialRampToValueAtTime(0.001, now+4);
+      const bm2 = ac.createOscillator(); bm2.type = 'triangle'; bm2.frequency.setValueAtTime(40, now); bm2.frequency.exponentialRampToValueAtTime(8, now+3.5);
+      const bm2G = ac.createGain(); bm2G.gain.setValueAtTime(0.4, now); bm2G.gain.exponentialRampToValueAtTime(0.001, now+4);
+      const rum = ac.createBufferSource(); rum.buffer = brownNoise; rum.playbackRate.value = 0.5;
+      const rF = ac.createBiquadFilter(); rF.type = 'lowpass'; rF.frequency.setValueAtTime(300, now); rF.frequency.exponentialRampToValueAtTime(40, now+3);
+      const rD = ac.createWaveShaper(); rD.curve = makeDistCurve(80);
+      const rG = ac.createGain(); rG.gain.setValueAtTime(0.3, now+0.1); rG.gain.exponentialRampToValueAtTime(0.001, now+3.5);
+      const ck = ac.createOscillator(); ck.type = 'square'; ck.frequency.setValueAtTime(5000, now); ck.frequency.exponentialRampToValueAtTime(50, now+0.05);
+      const ckG = ac.createGain(); ckG.gain.setValueAtTime(0.6, now); ckG.gain.exponentialRampToValueAtTime(0.001, now+0.06);
+      ns.connect(nF); nF.connect(d1); d1.connect(d2); d2.connect(d3); d3.connect(nG);
+      bm.connect(bmD); bmD.connect(bmG); bm2.connect(bm2G); rum.connect(rF); rF.connect(rD); rD.connect(rG); ck.connect(ckG);
+      [nG, bmG, bm2G, rG, ckG].forEach(n => toMaster(n));
+      [ns, bm, bm2, rum, ck].forEach(n => n.start(now));
+      ns.stop(now+4); bm.stop(now+4); bm2.stop(now+4); rum.stop(now+3.5); ck.stop(now+0.07);
+    } break;
+  }
+}
+
+function setMacro(val) {
+  if (!masterFilter || !masterDist || !actx) return;
+  const now = actx.currentTime, n = val / POT_MAX;
+  masterFilter.frequency.setTargetAtTime(200 + n * 11800, now, 0.05);
+  masterDist.curve = makeDistCurve(5 + n * 200);
+  masterFilter.Q.setTargetAtTime(1 + Math.sin(n * Math.PI) * 8, now, 0.05);
+  potNorm = n;
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  BUTTON LOGIC (hold = sustain, double-tap = latch toggle)
+// ═══════════════════════════════════════════════════════════════
+function btnOn(i) {
+  const b = btn[i], now = Date.now();
+  if (b.active && b.locked) {
+    // Already latched on — unlock & stop
+    b.locked = false; b.physHeld = false;
+    stopBtn(i);
+    return;
+  }
+  if (now - b.lastPress < DOUBLE_TAP_MS && !b.locked) {
+    // Double-tap — latch
+    b.locked = true;
+  }
+  b.lastPress = now;
+  b.physHeld = true;
+  if (!b.active) startBtn(i);
+}
+
+function btnOff(i) {
+  const b = btn[i];
+  b.physHeld = false;
+  if (b.locked) return; // latched, keep playing
+  if (b.active) stopBtn(i);
+}
+
+function startBtn(i) {
+  const b = btn[i]; b.active = true; b.envTarget = 1;
+  if (!actx) initAudio();
+  if (i >= 1 && i <= 4) { b.voiceId = startNoise(i-1); }
+  else if (i >= 5 && i <= 8) { b.voiceId = startScream(i-5); }
+  else if (i >= 9 && i <= 12) { triggerDrum(i-9); triggerFlash(); b.voiceId = null;
+    // One-shot with auto-off after envelope decay
+    setTimeout(() => { b.active = false; b.locked = false; b.envTarget = 0; updateBtnUI(i); },
+      [3500, 2500, 3500, 4000][i-9]); }
+  updateBtnUI(i);
+}
+
+function stopBtn(i) {
+  const b = btn[i]; b.active = false; b.envTarget = 0;
+  if (b.voiceId) { const v = activeVoices.get(b.voiceId); if (v) v.stop(); b.voiceId = null; }
+  updateBtnUI(i);
+}
+
+function updateBtnUI(i) {
+  const el = document.querySelector(`[data-btn="${i}"]`);
+  if (!el) return;
+  const b = btn[i];
+  el.classList.toggle('active', b.active && !b.locked);
+  el.classList.toggle('locked', b.active && b.locked);
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  SERIAL (Pico connection — robust pattern)
+// ═══════════════════════════════════════════════════════════════
+function setConn(s, t) {
+  const d = document.getElementById('connDot'), l = document.getElementById('connLabel'), b = document.getElementById('btnConn');
+  d.className = 'conn-dot' + (s === 'on' ? ' on' : s === 'try' ? ' trying' : '');
+  l.innerHTML = '<b>' + t + '</b>';
+  if (s === 'on') { b.textContent = 'DISCONNECT'; b.classList.add('live'); }
+  else { b.textContent = 'CONNECT'; b.classList.remove('live'); }
+}
+
+async function toggleConn() { if (port) await doDisconnect(true); else await doConnect(); }
+
+async function doConnect() {
+  if (!('serial' in navigator)) { miniLog('No Web Serial — use Chrome/Edge'); return; }
+  setConn('try', 'CONNECTING…'); document.getElementById('btnConn').disabled = true;
+  try {
+    port = await navigator.serial.requestPort(); await port.open({ baudRate: 115200 });
+    initAudio(); setConn('on', 'ONLINE'); document.getElementById('btnConn').disabled = false;
+    readSerial();
+  } catch(e) { port = null; setConn('', 'OFFLINE'); document.getElementById('btnConn').disabled = false; miniLog('Err: ' + e.message); }
+}
+
+async function doDisconnect(user = true) {
+  readActive = false;
+  if (reader) { try { await reader.cancel(); } catch(_) {} reader = null; }
+  if (port) { try { await port.close(); } catch(_) {} port = null; }
+  potSmoothed = 0; potAnchor = -1; potDispPct = -1;
+  setConn('', user ? 'OFFLINE' : 'LOST');
+  miniLog(user ? 'Disconnected' : 'Device lost');
+}
+
+async function readSerial() {
+  let buf = ''; readActive = true;
+  try { while (port && port.readable && readActive) {
+    reader = port.readable.getReader(); const dec = new TextDecoder();
+    try { while (true) { const {value, done} = await reader.read(); if (done) break;
+      buf += dec.decode(value, {stream: true}); const lines = buf.split('\n'); buf = lines.pop();
+      lines.forEach(parseLine); } }
+    finally { reader.releaseLock(); reader = null; } } }
+  catch(e) { if (readActive) { miniLog('Lost: ' + e.message); doDisconnect(false); } }
+  readActive = false;
+}
+navigator.serial?.addEventListener('disconnect', e => { if (port && e.target === port) doDisconnect(false); });
+
+function parseLine(raw) {
+  const line = raw.trim(); if (!line) return;
+  let m = line.match(/^Button\s+(\d+)\s+PRESSED/i);
+  if (m) { const n = +m[1]; if (n >= 1 && n <= 12) btnOn(n); return; }
+  m = line.match(/^Button\s+(\d+)\s+RELEASED/i);
+  if (m) { const n = +m[1]; if (n >= 1 && n <= 12) btnOff(n); return; }
+  m = line.match(/Potentiometer[^:]*:\s*(\d+)/i);
+  if (m) {
+    const raw = +m[1];
+    if (potAnchor === -1) { potSmoothed = raw; potAnchor = raw; applyPot(raw); }
+    else { potSmoothed = POT_EMA * raw + (1 - POT_EMA) * potSmoothed;
+      if (Math.abs(potSmoothed - potAnchor) >= POT_DEAD) { potAnchor = potSmoothed; applyPot(Math.round(potSmoothed)); } }
+  }
+}
+
+function applyPot(val) {
+  const pct = Math.min(100, Math.max(0, Math.round(val / POT_MAX * 100)));
+  if (pct === potDispPct) return; potDispPct = pct;
+  document.getElementById('potSlider').value = val;
+  setMacro(val);
+}
+
+document.getElementById('btnConn').onclick = toggleConn;
+
+// Slider manual control
+document.getElementById('potSlider').addEventListener('input', e => {
+  const val = parseInt(e.target.value);
+  setMacro(val);
+});
+
+// ═══════════════════════════════════════════════════════════════
+//  KEYBOARD + MOUSE HANDLERS
+// ═══════════════════════════════════════════════════════════════
+const KEY_MAP = {'1':1,'2':2,'3':3,'4':4,'q':5,'w':6,'e':7,'r':8,'a':9,'s':10,'d':11,'f':12};
+const keysDown = new Set();
+
+document.addEventListener('keydown', e => {
+  if (e.repeat) return;
+  const idx = KEY_MAP[e.key.toLowerCase()];
+  if (idx) { keysDown.add(idx); btnOn(idx); }
+});
+document.addEventListener('keyup', e => {
+  const idx = KEY_MAP[e.key.toLowerCase()];
+  if (idx) { keysDown.delete(idx); btnOff(idx); }
+});
+
+// Mouse/touch on buttons
+document.querySelectorAll('.syn-btn').forEach(el => {
+  const idx = parseInt(el.dataset.btn);
+  el.addEventListener('mousedown', e => { e.preventDefault(); btnOn(idx); });
+  el.addEventListener('mouseup', () => btnOff(idx));
+  el.addEventListener('mouseleave', () => { if (btn[idx].physHeld && !btn[idx].locked) btnOff(idx); });
+  el.addEventListener('touchstart', e => { e.preventDefault(); btnOn(idx); }, {passive: false});
+  el.addEventListener('touchend', () => btnOff(idx));
+});
+
+const miniLogEl = document.getElementById('miniLog');
+function miniLog(msg) { const p = document.createElement('div'); p.textContent = msg; miniLogEl.appendChild(p);
+  while (miniLogEl.children.length > 10) miniLogEl.firstChild.remove(); miniLogEl.scrollTop = miniLogEl.scrollHeight; }
+
+function triggerFlash() { flashIntensity = 1; }
+
+// ════════════════════════════════════════════════════════════
+// ENVELOPE & ACCUMULATOR UPDATE
+// ════════════════════════════════════════════════════════════
+function updateEnvelopes(dt) {
+  noiseAccum = 0; droneAccum = 0; drumAccum = 0;
+  for (let i = 1; i <= 12; i++) {
+    const b = btn[i];
+    if (b.envTarget > b.envelope) b.envelope = Math.min(b.envTarget, b.envelope + dt / b.envAttack);
+    else b.envelope = Math.max(0, b.envelope - dt / b.envRelease);
+    if (i <= 4) noiseAccum += b.envelope;
+    else if (i <= 8) droneAccum += b.envelope;
+    else drumAccum += b.envelope;
+  }
+  noiseAccum = Math.min(noiseAccum, 4);
+  droneAccum = Math.min(droneAccum, 4);
+  drumAccum = Math.min(drumAccum, 4);
+
+  shakeIntensity = drumAccum * 0.5 + noiseAccum * 0.1;
+  tearIntensity = drumAccum * 0.3 + noiseAccum * 0.05;
+  flashIntensity = Math.max(0, flashIntensity - dt * 4);
+  globalDistort = Math.min(1, drumAccum * 0.35 + noiseAccum * 0.15 + droneAccum * 0.05);
+}
+
+// ════════════════════════════════════════════════════════════
+// WEBGL VISUALIZER — ALL EFFECTS IN A SINGLE FRAGMENT SHADER
+// ════════════════════════════════════════════════════════════
+const VERT_SRC = `
+attribute vec2 a_pos;
+void main() { gl_Position = vec4(a_pos, 0.0, 1.0); }
+`;
+
+const FRAG_SRC = `
+precision mediump float;
+
+uniform vec2 u_res;
+uniform float u_time;
+uniform float u_dt;
+uniform int u_frame;
+
+// Envelopes
+uniform float u_e1; // screech
+uniform float u_e2; // rumble
+uniform float u_e3; // shred
+uniform float u_e4; // drone noise
+uniform float u_d1; // scream voice 1
+uniform float u_d2;
+uniform float u_d3;
+uniform float u_d4;
+uniform float u_kick;
+uniform float u_snare;
+uniform float u_crash;
+uniform float u_cata;
+
+// Accumulators
+uniform float u_noise;
+uniform float u_drone;
+uniform float u_drum;
+uniform float u_pot;
+uniform float u_distort;
+uniform float u_flash;
+
+// Previous frame
+uniform sampler2D u_prev;
+
+// ─── HASH FUNCTIONS ───
+float hash(vec2 p) {
+  return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
+}
+float hash1(float n) {
+  return fract(sin(n) * 43758.5453);
+}
+
+// ─── NOISE (value noise for organic textures) ───
+float vnoise(vec2 p) {
+  vec2 i = floor(p);
+  vec2 f = fract(p);
+  f = f * f * (3.0 - 2.0 * f);
+  float a = hash(i);
+  float b = hash(i + vec2(1.0, 0.0));
+  float c = hash(i + vec2(0.0, 1.0));
+  float d = hash(i + vec2(1.0, 1.0));
+  return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
+}
+
+// ─── FBM for Von Neumann-style organic structures ───
+float fbm(vec2 p) {
+  float v = 0.0, a = 0.5;
+  mat2 rot = mat2(0.8, 0.6, -0.6, 0.8);
+  for (int i = 0; i < 5; i++) {
+    v += a * vnoise(p);
+    p = rot * p * 2.0;
+    a *= 0.5;
+  }
+  return v;
+}
+
+// ─── VON NEUMANN CA-LIKE PATTERN ───
+float caPattern(vec2 uv, float t) {
+  vec2 p = uv * 40.0;
+  vec2 cell = floor(p);
+  vec2 f = fract(p);
+
+  float center = hash(cell + floor(vec2(t * 0.5)));
+  float north  = hash(cell + vec2(0.0, 1.0) + floor(vec2(t * 0.5)));
+  float south  = hash(cell + vec2(0.0,-1.0) + floor(vec2(t * 0.5)));
+  float east   = hash(cell + vec2(1.0, 0.0) + floor(vec2(t * 0.5)));
+  float west   = hash(cell + vec2(-1.0,0.0) + floor(vec2(t * 0.5)));
+
+  float threshold = 0.5 - u_noise * 0.1 + u_drone * 0.1;
+  float count = step(threshold, north) + step(threshold, south) + step(threshold, east) + step(threshold, west);
+  float alive = step(0.5, center) * step(1.0, count) * step(count, 3.0);
+
+  float edge = step(0.05, f.x) * step(f.x, 0.95) * step(0.05, f.y) * step(f.y, 0.95);
+  return alive * edge;
+}
+
+// ─── SIGNAL PROPAGATION ───
+float signalWave(vec2 uv, float t, float speed, float dir) {
+  float angle = dir * 3.14159 * 0.5;
+  vec2 d = vec2(cos(angle), sin(angle));
+  float wave = dot(uv - 0.5, d) * 20.0 - t * speed;
+  return smoothstep(0.4, 0.5, fract(wave)) * smoothstep(0.6, 0.5, fract(wave));
+}
+
+void main() {
+  vec2 uv = gl_FragCoord.xy / u_res;
+  vec2 centeredUV = uv - 0.5;
+  float t = u_time;
+
+  // ─── 1) FEEDBACK with analog persistence ───
+  float drift = (hash1(t * 13.7) - 0.5) * u_noise * 0.008 +
+                (hash1(t * 7.3) - 0.5) * u_drum * 0.025;
+  float rollSpeed = u_drone * 0.0004 + u_noise * 0.0002;
+
+  vec2 fbUV = uv + vec2(drift, rollSpeed);
+
+  float caOff = u_distort * 0.003;
+  float fbR = texture2D(u_prev, fbUV + vec2(caOff, 0.0)).r;
+  float fbG = texture2D(u_prev, fbUV).r;
+  float fbB = texture2D(u_prev, fbUV - vec2(caOff, 0.0)).r;
+  float fb = (fbR + fbG + fbB) / 3.0;
+
+  float persist = 0.85 + u_drone * 0.04 - u_noise * 0.03;
+  float totalIntensity = u_noise + u_drone + u_drum;
+  float decay = totalIntensity > 0.0 ? 0.04 + 0.03 / (1.0 + totalIntensity) : 0.12;
+  fb = fb * persist - decay;
+  fb = max(fb, 0.0);
+
+  float col = fb;
+
+  // ─── 2) VON NEUMANN CA FIELD ───
+  float ca = 0.0;
+  float caBase = caPattern(uv, t * 0.3);
+  ca += caBase * 0.3;
+
+  if (u_noise > 0.05) {
+    for (int i = 0; i < 4; i++) {
+      float dir = float(i);
+      ca += signalWave(uv, t * (2.0 + u_noise), 3.0 + u_noise * 2.0, dir) * u_noise * 0.15;
+    }
+  }
+
+  if (u_drone > 0.05) {
+    float droneCA = caPattern(uv * 0.7 + vec2(t * 0.05), t * 0.1);
+    ca += droneCA * u_drone * 0.2;
+    float conf = fbm(uv * 8.0 + t * 0.2) * u_drone * 0.15;
+    ca += conf;
+  }
+
+  col += ca;
+
+  // ─── 3) NOISE SYNTH OVERLAYS ───
+  if (u_e1 > 0.05) {
+    float tearY = hash1(floor(t * 30.0 + uv.y * 15.0));
+    float tear = step(1.0 - u_e1 * 0.3, tearY);
+    float tearBright = tear * (0.3 + u_e1 * 0.5);
+    float gap = step(0.6, hash(vec2(floor(uv.y * 50.0), floor(t * 10.0))));
+    tearBright *= (1.0 - gap * 0.7);
+    col += tearBright;
+  }
+
+  if (u_e2 > 0.05) {
+    float waveAmp = u_e2 * 0.03;
+    float waveFreq = 10.0 + u_e2 * 5.0;
+    float displacement = sin(t * 2.0 + uv.y * waveFreq) * waveAmp;
+    float displaced = texture2D(u_prev, uv + vec2(displacement, 0.0)).r;
+    col = mix(col, displaced, u_e2 * 0.5);
+    float bassGlow = smoothstep(0.7, 1.0, uv.y) * u_e2 * 0.15;
+    col += bassGlow;
+  }
+
+  if (u_e3 > 0.05) {
+    float shredAngle = t * 1.5 * u_e3;
+    for (int i = 0; i < 8; i++) {
+      float angle = shredAngle + float(i) * 0.4;
+      float line = abs(centeredUV.x * cos(angle) + centeredUV.y * sin(angle) -
+                       (hash1(float(i) + floor(t * 5.0)) - 0.5) * 0.5);
+      float cut = smoothstep(0.003 + u_e3 * 0.005, 0.0, line);
+      col += cut * (0.2 + u_e3 * 0.4);
+    }
+    for (int i = 0; i < 4; i++) {
+      float angle = shredAngle * 1.3 + float(i) * 0.6;
+      float line = abs(centeredUV.x * cos(angle) + centeredUV.y * sin(angle) -
+                       (hash1(float(i) + 100.0 + floor(t * 3.0)) - 0.5) * 0.4);
+      float cut = smoothstep(0.004, 0.0, line);
+      col -= cut * u_e3 * 0.5;
+    }
+  }
+
+  if (u_e4 > 0.05) {
+    float dronePulse = fbm(uv * 6.0 + t * 0.3) * u_e4;
+    float breathe = 0.5 + 0.5 * sin(t * 0.5);
+    col += dronePulse * breathe * 0.3;
+  }
+
+  // ─── 4) SCREAM VOICES (5-8) ───
+  if (u_d1 > 0.05) {
+    float rings = sin(length(centeredUV) * 30.0 - t * 2.0) * 0.5 + 0.5;
+    col += rings * u_d1 * 0.12;
+  }
+  if (u_d2 > 0.05) {
+    float grid = step(0.9, sin(uv.x * 40.0)) * step(0.9, sin(uv.y * 40.0 + t));
+    col += grid * u_d2 * 0.2;
+  }
+  if (u_d3 > 0.05) {
+    float spiral = sin(atan(centeredUV.y, centeredUV.x) * 3.0 + length(centeredUV) * 20.0 - t * 3.0);
+    col += max(0.0, spiral) * u_d3 * 0.15;
+  }
+  if (u_d4 > 0.05) {
+    float wave = sin(uv.x * 50.0 + sin(uv.y * 10.0 + t) * 3.0) * 0.5 + 0.5;
+    col += wave * u_d4 * 0.1;
+  }
+
+  // ─── 5) DRUM IMPACTS ───
+  if (u_kick > 0.05) {
+    float dist = length(centeredUV);
+    float ring = smoothstep(0.02, 0.0, abs(dist - u_kick * 0.5));
+    col += ring * u_kick * 0.8;
+    float compress = 1.0 + u_kick * 0.1;
+    vec2 compUV = centeredUV * compress + 0.5;
+    if (compUV.x > 0.0 && compUV.x < 1.0 && compUV.y > 0.0 && compUV.y < 1.0) {
+      col = mix(col, texture2D(u_prev, compUV).r, u_kick * 0.3);
+    }
+  }
+
+  if (u_snare > 0.05) {
+    float sliceHash = hash1(floor(uv.y * 30.0) + floor(t * 40.0));
+    float slice = step(1.0 - u_snare * 0.4, sliceHash);
+    float shift = (hash1(floor(uv.y * 30.0) + t * 50.0) - 0.5) * u_snare * 0.1;
+    float sliced = texture2D(u_prev, uv + vec2(shift * slice, 0.0)).r;
+    col = mix(col, sliced, slice * u_snare * 0.5);
+    col += slice * u_snare * 0.2;
+  }
+
+  if (u_crash > 0.05) {
+    float dist = length(centeredUV);
+    float explosion = smoothstep(u_crash * 0.8, 0.0, dist) * u_crash;
+    col += explosion * 0.4;
+    float angle = atan(centeredUV.y, centeredUV.x);
+    float rays = step(0.8, sin(angle * 20.0 + t * 10.0)) * smoothstep(0.5, 0.0, dist);
+    col += rays * u_crash * 0.3;
+  }
+
+  if (u_cata > 0.05) {
+    float noiseExp = hash(gl_FragCoord.xy + t * 100.0) * u_cata * 0.5;
+    col += noiseExp;
+    if (hash1(floor(t * 20.0)) > 0.5) {
+      col = mix(col, 1.0 - col, u_cata * 0.4);
+    }
+    float megaTear = step(1.0 - u_cata * 0.3, hash1(floor(uv.y * 15.0) + floor(t * 25.0)));
+    float megaShift = (hash1(floor(uv.y * 15.0) + t * 30.0) - 0.5) * u_cata * 0.2;
+    col = mix(col, texture2D(u_prev, uv + vec2(megaShift * megaTear, 0.0)).r, megaTear * 0.6);
+  }
+
+  // ─── 6) POT MACRO ───
+  if (u_pot > 0.01) {
+    float potBright = u_pot * u_pot;
+    float radial = smoothstep(0.6, 0.15, length(centeredUV));
+    col += potBright * (0.03 + radial * 0.05);
+
+    if (u_pot > 0.6 && u_noise > 0.5) {
+      float scale = 1.0 + u_pot * 0.04;
+      vec2 zoomUV = (uv - 0.5) / scale + 0.5;
+      float zoomFB = texture2D(u_prev, zoomUV).r;
+      col += zoomFB * 0.08 * u_pot;
+    }
+  }
+
+  // ─── 7) VHS ARTIFACTS ───
+  if (u_noise > 0.3) {
+    float jitterLine = step(0.92, hash(vec2(floor(uv.y * 100.0), floor(t * 15.0))));
+    float jitterAmt = (hash1(floor(uv.y * 100.0) + t * 20.0) - 0.5) * u_noise * 0.02;
+    col = mix(col, texture2D(u_prev, uv + vec2(jitterAmt, 0.0)).r, jitterLine);
+  }
+
+  if (u_distort > 0.1) {
+    float dropY = hash1(floor(t * 8.0) + 77.0);
+    float dropH = 0.01 + hash1(floor(t * 8.0) + 33.0) * 0.05 * u_distort;
+    float dropout = smoothstep(0.0, 0.002, abs(uv.y - dropY) - dropH);
+    float dropColor = hash1(floor(t * 12.0)) > 0.5 ? 1.0 : 0.0;
+    col = mix(dropColor * 0.1, col, dropout);
+  }
+
+  // ─── 8) NOISE+DRONE CROSS-POLLINATION ───
+  if (u_noise > 0.3 && u_drone > 0.3) {
+    float cross = u_noise * u_drone;
+    float particle = step(0.997 - cross * 0.003, hash(gl_FragCoord.xy * 0.1 + t * 7.0));
+    col += particle * cross * 0.5;
+  }
+
+  // ─── FLASH ───
+  col += u_flash * 0.4;
+
+  // ─── CLAMP & OUTPUT ───
+  col = clamp(col, 0.0, 1.0);
+  gl_FragColor = vec4(vec3(col), 1.0);
+}
+`;
+
+// ─── WebGL Setup ───
+function initGL() {
+  gl = vizCanvas.getContext('webgl', {
+    alpha: false,
+    antialias: false,
+    depth: false,
+    stencil: false,
+    preserveDrawingBuffer: false,
+    powerPreference: 'high-performance'
+  });
+  if (!gl) {
+    console.error('WebGL not supported');
+    return false;
+  }
+  return true;
+}
+
+function compileShader(src, type) {
+  const s = gl.createShader(type);
+  gl.shaderSource(s, src);
+  gl.compileShader(s);
+  if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) {
+    console.error('Shader compile error:', gl.getShaderInfoLog(s));
+    return null;
+  }
+  return s;
+}
+
+let program, uLocs = {};
+let pingTex, pongTex, fbo;
+let currentTex = 0;
+let quadBuf;
+
+function createTexture(w, h) {
+  const tex = gl.createTexture();
+  gl.bindTexture(gl.TEXTURE_2D, tex);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, w, h, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  return tex;
+}
+
+function setupGL() {
+  if (!initGL()) return false;
+
+  const vs = compileShader(VERT_SRC, gl.VERTEX_SHADER);
+  const fs = compileShader(FRAG_SRC, gl.FRAGMENT_SHADER);
+  if (!vs || !fs) return false;
+
+  program = gl.createProgram();
+  gl.attachShader(program, vs);
+  gl.attachShader(program, fs);
+  gl.bindAttribLocation(program, 0, 'a_pos');
+  gl.linkProgram(program);
+  if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+    console.error('Program link error:', gl.getProgramInfoLog(program));
+    return false;
+  }
+  gl.useProgram(program);
+
+  const uniforms = [
+    'u_res','u_time','u_dt','u_frame',
+    'u_e1','u_e2','u_e3','u_e4',
+    'u_d1','u_d2','u_d3','u_d4',
+    'u_kick','u_snare','u_crash','u_cata',
+    'u_noise','u_drone','u_drum','u_pot','u_distort','u_flash',
+    'u_prev'
+  ];
+  for (const name of uniforms) {
+    uLocs[name] = gl.getUniformLocation(program, name);
+  }
+
+  quadBuf = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, quadBuf);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, -1,1, 1,1]), gl.STATIC_DRAW);
+  gl.enableVertexAttribArray(0);
+  gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
+
+  resize();
+
+  fbo = gl.createFramebuffer();
+
+  return true;
+}
+
+function resize() {
+  const dpr = Math.min(window.devicePixelRatio, 2);
+  const rect = vizCanvas.getBoundingClientRect();
+  W = Math.floor(rect.width * dpr);
+  H = Math.floor(rect.height * dpr);
+
+  const maxDim = 1920;
+  if (W > maxDim) { const s = maxDim / W; W = maxDim; H = Math.floor(H * s); }
+  if (H > maxDim) { const s = maxDim / H; H = maxDim; W = Math.floor(W * s); }
+
+  vizCanvas.width = W;
+  vizCanvas.height = H;
+  gl.viewport(0, 0, W, H);
+
+  if (pingTex) gl.deleteTexture(pingTex);
+  if (pongTex) gl.deleteTexture(pongTex);
+  pingTex = createTexture(W, H);
+  pongTex = createTexture(W, H);
+}
+
+window.addEventListener('resize', () => { if (gl) resize(); });
+
+// ════════════════════════════════════════════════════════════
+// RENDER LOOP
+// ════════════════════════════════════════════════════════════
+let startTime = 0;
+let lastTime = 0;
+
+function frame(ts) {
+  requestAnimationFrame(frame);
+  if (!startTime) startTime = ts;
+  const dt = Math.min(0.05, (ts - lastTime) / 1000);
+  lastTime = ts;
+  const time = (ts - startTime) / 1000;
+
+  updateEnvelopes(dt);
+  frameCount++;
+
+  // CSS-based shake (zero GPU cost)
+  document.body.classList.toggle('shaking', shakeIntensity > 0.05 && shakeIntensity < 0.4);
+  document.body.classList.toggle('shaking-hard', shakeIntensity >= 0.4);
+  document.getElementById('glitchTear').classList.toggle('active', tearIntensity > 0.1);
+  document.getElementById('flashOverlay').style.opacity = flashIntensity * 0.4;
+
+  const readTex = currentTex === 0 ? pingTex : pongTex;
+  const writeTex = currentTex === 0 ? pongTex : pingTex;
+
+  gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
+  gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, writeTex, 0);
+
+  gl.activeTexture(gl.TEXTURE0);
+  gl.bindTexture(gl.TEXTURE_2D, readTex);
+
+  gl.uniform2f(uLocs.u_res, W, H);
+  gl.uniform1f(uLocs.u_time, time);
+  gl.uniform1f(uLocs.u_dt, dt);
+  gl.uniform1i(uLocs.u_frame, frameCount);
+
+  gl.uniform1f(uLocs.u_e1, btn[1].envelope);
+  gl.uniform1f(uLocs.u_e2, btn[2].envelope);
+  gl.uniform1f(uLocs.u_e3, btn[3].envelope);
+  gl.uniform1f(uLocs.u_e4, btn[4].envelope);
+  gl.uniform1f(uLocs.u_d1, btn[5].envelope);
+  gl.uniform1f(uLocs.u_d2, btn[6].envelope);
+  gl.uniform1f(uLocs.u_d3, btn[7].envelope);
+  gl.uniform1f(uLocs.u_d4, btn[8].envelope);
+  gl.uniform1f(uLocs.u_kick, btn[9].envelope);
+  gl.uniform1f(uLocs.u_snare, btn[10].envelope);
+  gl.uniform1f(uLocs.u_crash, btn[11].envelope);
+  gl.uniform1f(uLocs.u_cata, btn[12].envelope);
+
+  gl.uniform1f(uLocs.u_noise, noiseAccum);
+  gl.uniform1f(uLocs.u_drone, droneAccum);
+  gl.uniform1f(uLocs.u_drum, drumAccum);
+  gl.uniform1f(uLocs.u_pot, potNorm);
+  gl.uniform1f(uLocs.u_distort, globalDistort);
+  gl.uniform1f(uLocs.u_flash, flashIntensity);
+
+  gl.uniform1i(uLocs.u_prev, 0);
+
+  gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+
+  gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+  gl.bindTexture(gl.TEXTURE_2D, writeTex);
+  gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+
+  currentTex = 1 - currentTex;
+}
+
+// ─── INIT ───
+if (setupGL()) {
+  requestAnimationFrame(frame);
+} else {
+  document.getElementById('vizArea').innerHTML = '<div style="color:red;padding:20px">WebGL not available. Please use a modern browser.</div>';
+}
+
+</script>
+</body>
+</html>
