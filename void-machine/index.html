@@ -2,13 +2,15 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="mobile-web-app-capable" content="yes"/>
 <title>VOID MACHINE</title>
 <style>
-*{margin:0;padding:0;box-sizing:border-box}
-html,body{width:100%;height:100%;overflow:hidden;background:#000;color:#ccc;font-family:'Courier New',monospace}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{width:100%;height:100%;overflow:hidden;background:#000;color:#ccc;font-family:'Courier New',monospace;touch-action:none}
 
-/* VHS Overlay — CSS only, zero JS cost */
+/* VHS Overlay */
 #vhsOverlay{position:fixed;inset:0;pointer-events:none;z-index:100;mix-blend-mode:screen}
 #vhsOverlay::before{content:'';position:absolute;inset:0;
 background:repeating-linear-gradient(0deg,rgba(255,255,255,0.015) 0px,rgba(255,255,255,0.015) 1px,transparent 1px,transparent 3px);
@@ -17,7 +19,7 @@ animation:scanlineScroll 8s linear infinite}
 background:radial-gradient(ellipse at center,transparent 60%,rgba(0,0,0,0.5) 100%)}
 @keyframes scanlineScroll{0%{transform:translateY(0)}100%{transform:translateY(100%)}}
 
-/* Shake — CSS animations, triggered by class toggle */
+/* Shake */
 @keyframes shakeSmall{
 0%,100%{transform:translate(0)}
 10%{transform:translate(-2px,1px)}
@@ -41,7 +43,7 @@ background:radial-gradient(ellipse at center,transparent 60%,rgba(0,0,0,0.5) 100
 body.shaking{animation:shakeSmall 0.08s infinite}
 body.shaking-hard{animation:shakeHard 0.05s infinite}
 
-/* Glitch tear — CSS only */
+/* Glitch tear */
 @keyframes glitchTear{
 0%{clip-path:inset(0 0 100% 0)}
 10%{clip-path:inset(30% 0 50% 0);transform:translateX(8px)}
@@ -56,51 +58,106 @@ body.shaking-hard{animation:shakeHard 0.05s infinite}
 
 #flashOverlay{position:fixed;inset:0;background:#fff;opacity:0;pointer-events:none;z-index:80;transition:opacity 0.05s}
 
-/* Layout */
-#app{display:flex;width:100%;height:100%;position:relative;z-index:1}
-
-#leftPanel{
-width:260px;min-width:260px;
-background:rgba(10,10,10,0.92);
-border-right:1px solid #222;
-display:flex;flex-direction:column;
-padding:12px;gap:10px;
-z-index:20;overflow-y:auto;
-backdrop-filter:blur(2px);
+/* ─── FULLSCREEN CANVAS (behind everything) ─── */
+#vizCanvas{
+  position:fixed;
+  inset:0;
+  width:100%;height:100%;
+  display:block;
+  z-index:0;
 }
 
-.panel-title{
-font-size:10px;letter-spacing:3px;text-transform:uppercase;
-color:#555;border-bottom:1px solid #222;padding-bottom:4px;margin-bottom:2px;
+/* ─── MOBILE CONTROL PANEL (overlay on top) ─── */
+#controlPanel{
+  position:fixed;
+  top:0;left:0;right:0;
+  z-index:50;
+  background:rgba(0,0,0,0.88);
+  backdrop-filter:blur(4px);
+  -webkit-backdrop-filter:blur(4px);
+  border-bottom:1px solid #222;
+  transition:transform 0.3s ease, opacity 0.3s ease;
+  max-height:85vh;
+  overflow-y:auto;
+  -webkit-overflow-scrolling:touch;
+  padding:env(safe-area-inset-top) 12px 12px 12px;
+}
+#controlPanel.collapsed{
+  transform:translateY(calc(-100% + 44px));
+  opacity:0.95;
 }
 
-/* Button grid */
-.btn-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+/* Toggle bar */
+#toggleBar{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  height:44px;
+  padding:0 4px;
+  cursor:pointer;
+  position:sticky;
+  top:0;
+  background:rgba(0,0,0,0.95);
+  z-index:2;
+  border-bottom:1px solid #1a1a1a;
+}
+#toggleBar .title{
+  font-size:11px;letter-spacing:3px;text-transform:uppercase;color:#666;
+}
+#toggleBar .arrow{
+  font-size:14px;color:#555;transition:transform 0.3s;
+}
+#controlPanel.collapsed #toggleBar .arrow{
+  transform:rotate(180deg);
+}
+
+/* Section labels */
+.section-label{
+  font-size:8px;letter-spacing:2px;text-transform:uppercase;
+  color:#444;margin:10px 0 6px 0;
+  border-bottom:1px solid #1a1a1a;
+  padding-bottom:3px;
+}
+
+/* Button grids — 4 columns on mobile for compact layout */
+.btn-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr 1fr 1fr;
+  gap:6px;
+}
+
+/* Large touch-friendly buttons */
 .syn-btn{
-background:#111;border:1px solid #333;color:#888;
-font-size:10px;letter-spacing:1px;padding:10px 4px;
-cursor:pointer;text-transform:uppercase;transition:all 0.05s;
-font-family:inherit;position:relative;overflow:hidden;
+  background:#0a0a0a;
+  border:1px solid #333;
+  color:#777;
+  font-size:9px;
+  letter-spacing:0.5px;
+  padding:14px 4px;
+  cursor:pointer;
+  text-transform:uppercase;
+  transition:all 0.05s;
+  font-family:inherit;
+  position:relative;
+  overflow:hidden;
+  min-height:48px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  border-radius:2px;
+  user-select:none;
+  -webkit-user-select:none;
 }
-.syn-btn:hover{border-color:#555;color:#aaa}
+.syn-btn:active{background:#222;border-color:#555}
 .syn-btn.active{background:#fff!important;color:#000!important;border-color:#fff!important}
 .syn-btn.locked{background:#888!important;color:#000!important;border-color:#aaa!important;box-shadow:0 0 4px #aaa}
-.syn-btn .key-hint{
-position:absolute;top:2px;right:4px;font-size:8px;color:#444;
-}
+.syn-btn .key-hint{display:none} /* Hide keyboard hints on mobile */
 
-/* Slider */
-.slider-row{display:flex;align-items:center;gap:8px;margin:2px 0}
-.slider-row label{font-size:9px;color:#555;width:50px;text-transform:uppercase;letter-spacing:1px}
-.slider-row input[type=range]{
-flex:1;-webkit-appearance:none;appearance:none;height:2px;background:#333;outline:none;
+/* Connection row */
+.conn-row{
+  display:flex;align-items:center;gap:8px;
+  padding:6px 0;
 }
-.slider-row input[type=range]::-webkit-slider-thumb{
--webkit-appearance:none;width:10px;height:10px;background:#888;cursor:pointer;
-}
-
-/* Connection bar */
-.conn-row{display:flex;align-items:center;gap:8px;margin-bottom:4px}
 .conn-dot{width:8px;height:8px;border-radius:50%;background:#f44;flex-shrink:0;transition:background 0.3s}
 .conn-dot.on{background:#4f4;box-shadow:0 0 6px #4f4}
 .conn-dot.trying{background:#fa0;animation:pulse 0.6s infinite alternate}
@@ -108,29 +165,98 @@ flex:1;-webkit-appearance:none;appearance:none;height:2px;background:#333;outlin
 .conn-label{font-size:9px;color:#666;flex:1}
 .conn-label b{color:#aaa}
 .btn-conn{
-background:#222;color:#888;border:1px solid #333;border-radius:4px;
-padding:4px 8px;font-size:9px;font-family:inherit;cursor:pointer;
+  background:#111;color:#888;border:1px solid #333;border-radius:4px;
+  padding:8px 12px;font-size:10px;font-family:inherit;cursor:pointer;
+  min-height:36px;
 }
-.btn-conn:hover{color:#fff;border-color:#555}
+.btn-conn:active{color:#fff;border-color:#555}
 .btn-conn.live{border-color:#4f4;color:#4f4}
 
-/* Status */
-#status{font-size:8px;color:#333;letter-spacing:1px;margin-top:auto;padding-top:8px;border-top:1px solid #181818}
-#miniLog{max-height:40px;overflow-y:auto;margin-top:4px}
+/* Slider */
+.slider-row{display:flex;align-items:center;gap:8px;margin:4px 0;padding:4px 0}
+.slider-row label{font-size:9px;color:#555;width:45px;text-transform:uppercase;letter-spacing:1px;flex-shrink:0}
+.slider-row input[type=range]{
+  flex:1;-webkit-appearance:none;appearance:none;height:4px;background:#333;outline:none;border-radius:2px;
+}
+.slider-row input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none;width:20px;height:20px;background:#888;cursor:pointer;border-radius:50%;
+}
 
-/* Viz canvas */
-#vizArea{flex:1;position:relative;background:#000}
-#vizCanvas{width:100%;height:100%;display:block}
+/* Status & links */
+#status{font-size:8px;color:#333;letter-spacing:1px;padding-top:6px;border-top:1px solid #181818;margin-top:6px}
+#miniLog{max-height:30px;overflow-y:auto;margin-top:4px}
+.return-link{
+  display:block;text-align:center;text-decoration:none;
+  margin-top:8px;padding:10px;
+  background:#111;border:1px solid #333;border-radius:4px;
+  color:#666;font-size:10px;font-family:inherit;
+}
+
+/* ─── DESKTOP: side panel layout ─── */
+@media (min-width:769px){
+  #controlPanel{
+    top:0;bottom:0;left:0;right:auto;
+    width:280px;
+    max-height:100vh;
+    border-bottom:none;
+    border-right:1px solid #222;
+    transform:none!important;
+    opacity:1!important;
+    padding:12px;
+  }
+  #controlPanel.collapsed{
+    transform:none!important;
+    opacity:1!important;
+  }
+  #toggleBar{display:none}
+  #vizCanvas{
+    left:280px;
+    width:calc(100% - 280px);
+  }
+  .btn-grid{
+    grid-template-columns:1fr 1fr;
+  }
+  .syn-btn{
+    font-size:10px;
+    padding:10px 4px;
+    min-height:40px;
+  }
+  .syn-btn .key-hint{
+    display:block;
+    position:absolute;top:2px;right:4px;font-size:8px;color:#444;
+  }
+}
+
+/* ─── LANDSCAPE PHONE: more compact ─── */
+@media (max-height:500px) and (max-width:768px){
+  #controlPanel{
+    max-height:70vh;
+  }
+  .syn-btn{
+    padding:8px 2px;
+    min-height:36px;
+    font-size:8px;
+  }
+  .section-label{margin:6px 0 4px 0}
+  .slider-row{margin:2px 0}
+}
 </style>
 </head>
 <body>
+
 <div id="vhsOverlay"></div>
 <div id="glitchTear"></div>
 <div id="flashOverlay"></div>
 
-<div id="app">
-<div id="leftPanel">
-  <div class="panel-title">VOID MACHINE</div>
+<!-- FULLSCREEN VISUALIZER -->
+<canvas id="vizCanvas"></canvas>
+
+<!-- CONTROL PANEL OVERLAY -->
+<div id="controlPanel">
+  <div id="toggleBar">
+    <span class="title">VOID MACHINE</span>
+    <span class="arrow">▲</span>
+  </div>
 
   <!-- Connection -->
   <div class="conn-row">
@@ -139,7 +265,7 @@ padding:4px 8px;font-size:9px;font-family:inherit;cursor:pointer;
     <button class="btn-conn" id="btnConn">CONNECT</button>
   </div>
 
-  <div class="panel-title" style="margin-top:6px">NOISE SYNTHS</div>
+  <div class="section-label">NOISE SYNTHS</div>
   <div class="btn-grid" id="noiseGrid">
     <button class="syn-btn" data-btn="1">SCREECH<span class="key-hint">1</span></button>
     <button class="syn-btn" data-btn="2">RUMBLE<span class="key-hint">2</span></button>
@@ -147,7 +273,7 @@ padding:4px 8px;font-size:9px;font-family:inherit;cursor:pointer;
     <button class="syn-btn" data-btn="4">DRONE<span class="key-hint">4</span></button>
   </div>
 
-  <div class="panel-title" style="margin-top:6px">SCREAM VOICES</div>
+  <div class="section-label">SCREAM VOICES</div>
   <div class="btn-grid" id="droneGrid">
     <button class="syn-btn" data-btn="5">GROWL<span class="key-hint">Q</span></button>
     <button class="syn-btn" data-btn="6">GUT<span class="key-hint">W</span></button>
@@ -155,7 +281,7 @@ padding:4px 8px;font-size:9px;font-family:inherit;cursor:pointer;
     <button class="syn-btn" data-btn="8">SCREAM<span class="key-hint">R</span></button>
   </div>
 
-  <div class="panel-title" style="margin-top:6px">FX / DRUMS</div>
+  <div class="section-label">FX / DRUMS</div>
   <div class="btn-grid" id="drumGrid">
     <button class="syn-btn" data-btn="9">KICK<span class="key-hint">A</span></button>
     <button class="syn-btn" data-btn="10">DETONATE<span class="key-hint">S</span></button>
@@ -163,7 +289,7 @@ padding:4px 8px;font-size:9px;font-family:inherit;cursor:pointer;
     <button class="syn-btn" data-btn="12">CATACLYSM<span class="key-hint">F</span></button>
   </div>
 
-  <div class="panel-title" style="margin-top:8px">MACRO</div>
+  <div class="section-label">MACRO</div>
   <div class="slider-row"><label>FILTER</label><input type="range" id="potSlider" min="0" max="1023" value="512"></div>
 
   <div id="status">
@@ -172,19 +298,36 @@ padding:4px 8px;font-size:9px;font-family:inherit;cursor:pointer;
     <div id="miniLog"></div>
   </div>
 
-  <a href="https://kalharbi11.github.io/Communicative-Objects/" class="btn-conn" style="display:block;text-align:center;text-decoration:none;margin-top:12px;padding:8px;border-color:#555;">← RETURN TO MAIN PAGE</a>
-</div>
-
-<div id="vizArea">
-  <canvas id="vizCanvas"></canvas>
-</div>
+  <a href="https://kalharbi11.github.io/Communicative-Objects/" class="return-link">← RETURN TO MAIN PAGE</a>
 </div>
 
 <script>
 // ════════════════════════════════════════════════════════════
-// VOID MACHINE — Merged: New Style + Original Audio Engine
-// WebGL Visualizer + Full Scream/Drum Synths + Pico Serial
+// VOID MACHINE — Mobile-Optimized Layout
+// All audio, serial, WebGL shader code preserved from desktop version
 // ════════════════════════════════════════════════════════════
+
+// ─── MOBILE PANEL TOGGLE ───
+const controlPanel = document.getElementById('controlPanel');
+const toggleBar = document.getElementById('toggleBar');
+let panelCollapsed = false;
+
+// Auto-collapse on mobile after first interaction
+function isMobile() { return window.innerWidth < 769; }
+
+toggleBar.addEventListener('click', () => {
+  panelCollapsed = !panelCollapsed;
+  controlPanel.classList.toggle('collapsed', panelCollapsed);
+});
+
+// Start collapsed on mobile
+if (isMobile()) {
+  // Small delay so user sees the controls first
+  setTimeout(() => {
+    panelCollapsed = true;
+    controlPanel.classList.add('collapsed');
+  }, 2000);
+}
 
 // ─── CONFIGURATION ───
 const DOUBLE_TAP_MS = 280;
@@ -200,31 +343,26 @@ let gl;
 // ─── BUTTON STATE ───
 const btn = {};
 for (let i = 1; i <= 12; i++) {
-  btn[i] = { 
+  btn[i] = {
     active: false, locked: false, physHeld: false,
-    envelope: 0, envTarget: 0, 
+    envelope: 0, envTarget: 0,
     envAttack: 0.05, envRelease: 0.15,
     lastPress: 0, voiceId: null
   };
 }
-// Drum envelopes are one-shot with longer tails
 [9,10,11,12].forEach(i => { btn[i].envAttack = 0.01; btn[i].envRelease = 1.5; });
-// Screams have slower attack
 [5,6,7,8].forEach(i => { btn[i].envAttack = 0.18; btn[i].envRelease = 0.5; });
-// Noise
 [1,2,3,4].forEach(i => { btn[i].envAttack = 0.04; btn[i].envRelease = 0.12; });
 
-// Accumulators
 let noiseAccum = 0, droneAccum = 0, drumAccum = 0;
 let shakeIntensity = 0, tearIntensity = 0, flashIntensity = 0, globalDistort = 0;
 let potNorm = 0.5, potSmoothed = 0, potAnchor = -1, potDispPct = -1;
 let frameCount = 0;
 
-// Serial state
 let port = null, reader = null, readActive = false;
 
 // ═══════════════════════════════════════════════════════════════
-//  AUDIO ENGINE (Full Original — Scream Voices + Industrial Drums)
+//  AUDIO ENGINE (preserved identically)
 // ═══════════════════════════════════════════════════════════════
 let actx = null, masterGain = null, masterFilter = null, masterDist = null;
 let compressor = null, convolver = null, screamReverb = null;
@@ -313,7 +451,7 @@ function startNoise(idx) {
   activeVoices.set(id, {stop}); return id;
 }
 
-// ── SCREAM / DRONE VOICES (buttons 5-8) ──
+// ── SCREAM VOICES (buttons 5-8) ──
 const SCREAM_V = [
   {pitch:65,nmix:0.35,formants:[{f:550,fe:700,Q:16,g:1},{f:900,fe:1150,Q:14,g:0.8},{f:2400,fe:2600,Q:10,g:0.4},{f:3200,fe:3400,Q:8,g:0.25},{f:4500,fe:4500,Q:6,g:0.1}],
    subG:0.25,drv:60,lpF:4500,A:0.4,D:0.3,S:0.25,R:1.2},
@@ -372,7 +510,7 @@ function startScream(vi) {
 function triggerDrum(di) {
   const ac = getCtx(), now = ac.currentTime;
   switch(di) {
-    case 0: { // SEISMIC KICK
+    case 0: {
       const o = ac.createOscillator(); o.type = 'sine'; o.frequency.setValueAtTime(200, now); o.frequency.exponentialRampToValueAtTime(25, now+1.5); o.frequency.exponentialRampToValueAtTime(15, now+3);
       const s1 = ac.createOscillator(); s1.type = 'sine'; s1.frequency.setValueAtTime(100, now); s1.frequency.exponentialRampToValueAtTime(18, now+2.5);
       const s2 = ac.createOscillator(); s2.type = 'triangle'; s2.frequency.setValueAtTime(50, now); s2.frequency.exponentialRampToValueAtTime(12, now+3);
@@ -390,7 +528,7 @@ function triggerDrum(di) {
       [bG, s1G, s2G, ckG, nG].forEach(n => toMaster(n));
       [o, s1, s2, ck, ns].forEach(n => n.start(now)); o.stop(now+3.5); s1.stop(now+3); s2.stop(now+3.5); ck.stop(now+0.05); ns.stop(now+2.5);
     } break;
-    case 1: { // INDUSTRIAL DETONATION
+    case 1: {
       const ns = ac.createBufferSource(); ns.buffer = whiteNoise; ns.playbackRate.setValueAtTime(2, now); ns.playbackRate.exponentialRampToValueAtTime(0.5, now+1.5);
       const d1 = ac.createWaveShaper(); d1.curve = makeDistCurve(120); d1.oversample = '4x';
       const d2 = ac.createWaveShaper(); d2.curve = makeHardClip(30);
@@ -405,7 +543,7 @@ function triggerDrum(di) {
       [nG, tG, bmG].forEach(n => toMaster(n));
       ns.start(now); t.start(now); bm.start(now); ns.stop(now+2.5); t.stop(now+1.5); bm.stop(now+2.5);
     } break;
-    case 2: { // TECTONIC SLAM
+    case 2: {
       const imp = ac.createBufferSource(); imp.buffer = whiteNoise; imp.playbackRate.setValueAtTime(1.2, now); imp.playbackRate.exponentialRampToValueAtTime(0.15, now+2);
       const iD = ac.createWaveShaper(); iD.curve = makeDistCurve(200); iD.oversample = '4x';
       const iF = ac.createBiquadFilter(); iF.type = 'lowpass'; iF.frequency.setValueAtTime(8000, now); iF.frequency.exponentialRampToValueAtTime(100, now+2.5); iF.Q.value = 4;
@@ -420,7 +558,7 @@ function triggerDrum(di) {
       imp.connect(iF); iF.connect(iD); iD.connect(iG); sub.connect(sG); toMaster(iG); toMaster(sG);
       imp.start(now); sub.start(now); imp.stop(now+3); sub.stop(now+3.5);
     } break;
-    case 3: { // CATACLYSM
+    case 3: {
       const ns = ac.createBufferSource(); ns.buffer = whiteNoise; ns.playbackRate.setValueAtTime(2, now); ns.playbackRate.exponentialRampToValueAtTime(0.1, now+2.5);
       const d1 = ac.createWaveShaper(); d1.curve = makeDistCurve(150); d1.oversample = '4x';
       const d2 = ac.createWaveShaper(); d2.curve = makeHardClip(50);
@@ -457,29 +595,19 @@ function setMacro(val) {
 }
 
 // ═══════════════════════════════════════════════════════════════
-//  BUTTON LOGIC (hold = sustain, double-tap = latch toggle)
+//  BUTTON LOGIC (preserved identically)
 // ═══════════════════════════════════════════════════════════════
 function btnOn(i) {
   const b = btn[i], now = Date.now();
-  if (b.active && b.locked) {
-    // Already latched on — unlock & stop
-    b.locked = false; b.physHeld = false;
-    stopBtn(i);
-    return;
-  }
-  if (now - b.lastPress < DOUBLE_TAP_MS && !b.locked) {
-    // Double-tap — latch
-    b.locked = true;
-  }
-  b.lastPress = now;
-  b.physHeld = true;
+  if (b.active && b.locked) { b.locked = false; b.physHeld = false; stopBtn(i); return; }
+  if (now - b.lastPress < DOUBLE_TAP_MS && !b.locked) { b.locked = true; }
+  b.lastPress = now; b.physHeld = true;
   if (!b.active) startBtn(i);
 }
 
 function btnOff(i) {
-  const b = btn[i];
-  b.physHeld = false;
-  if (b.locked) return; // latched, keep playing
+  const b = btn[i]; b.physHeld = false;
+  if (b.locked) return;
   if (b.active) stopBtn(i);
 }
 
@@ -489,7 +617,6 @@ function startBtn(i) {
   if (i >= 1 && i <= 4) { b.voiceId = startNoise(i-1); }
   else if (i >= 5 && i <= 8) { b.voiceId = startScream(i-5); }
   else if (i >= 9 && i <= 12) { triggerDrum(i-9); triggerFlash(); b.voiceId = null;
-    // One-shot with auto-off after envelope decay
     setTimeout(() => { b.active = false; b.locked = false; b.envTarget = 0; updateBtnUI(i); },
       [3500, 2500, 3500, 4000][i-9]); }
   updateBtnUI(i);
@@ -510,7 +637,7 @@ function updateBtnUI(i) {
 }
 
 // ═══════════════════════════════════════════════════════════════
-//  SERIAL (Pico connection — robust pattern)
+//  SERIAL (preserved identically)
 // ═══════════════════════════════════════════════════════════════
 function setConn(s, t) {
   const d = document.getElementById('connDot'), l = document.getElementById('connLabel'), b = document.getElementById('btnConn');
@@ -578,14 +705,13 @@ function applyPot(val) {
 
 document.getElementById('btnConn').onclick = toggleConn;
 
-// Slider manual control
 document.getElementById('potSlider').addEventListener('input', e => {
   const val = parseInt(e.target.value);
   setMacro(val);
 });
 
 // ═══════════════════════════════════════════════════════════════
-//  KEYBOARD + MOUSE HANDLERS
+//  KEYBOARD + TOUCH HANDLERS
 // ═══════════════════════════════════════════════════════════════
 const KEY_MAP = {'1':1,'2':2,'3':3,'4':4,'q':5,'w':6,'e':7,'r':8,'a':9,'s':10,'d':11,'f':12};
 const keysDown = new Set();
@@ -600,14 +726,31 @@ document.addEventListener('keyup', e => {
   if (idx) { keysDown.delete(idx); btnOff(idx); }
 });
 
-// Mouse/touch on buttons
+// Enhanced touch handling — prevent panel collapse when interacting with buttons
 document.querySelectorAll('.syn-btn').forEach(el => {
   const idx = parseInt(el.dataset.btn);
   el.addEventListener('mousedown', e => { e.preventDefault(); btnOn(idx); });
   el.addEventListener('mouseup', () => btnOff(idx));
   el.addEventListener('mouseleave', () => { if (btn[idx].physHeld && !btn[idx].locked) btnOff(idx); });
-  el.addEventListener('touchstart', e => { e.preventDefault(); btnOn(idx); }, {passive: false});
-  el.addEventListener('touchend', () => btnOff(idx));
+  el.addEventListener('touchstart', e => {
+    e.preventDefault();
+    e.stopPropagation();
+    btnOn(idx);
+    // Auto-collapse panel after touch on mobile for fullscreen viz
+    if (isMobile() && !panelCollapsed) {
+      setTimeout(() => {
+        panelCollapsed = true;
+        controlPanel.classList.add('collapsed');
+      }, 300);
+    }
+  }, {passive: false});
+  el.addEventListener('touchend', e => {
+    e.preventDefault();
+    btnOff(idx);
+  });
+  el.addEventListener('touchcancel', () => {
+    btnOff(idx);
+  });
 });
 
 const miniLogEl = document.getElementById('miniLog');
@@ -640,7 +783,7 @@ function updateEnvelopes(dt) {
 }
 
 // ════════════════════════════════════════════════════════════
-// WEBGL VISUALIZER — ALL EFFECTS IN A SINGLE FRAGMENT SHADER
+// WEBGL VISUALIZER (shader preserved identically)
 // ════════════════════════════════════════════════════════════
 const VERT_SRC = `
 attribute vec2 a_pos;
@@ -655,12 +798,11 @@ uniform float u_time;
 uniform float u_dt;
 uniform int u_frame;
 
-// Envelopes
-uniform float u_e1; // screech
-uniform float u_e2; // rumble
-uniform float u_e3; // shred
-uniform float u_e4; // drone noise
-uniform float u_d1; // scream voice 1
+uniform float u_e1;
+uniform float u_e2;
+uniform float u_e3;
+uniform float u_e4;
+uniform float u_d1;
 uniform float u_d2;
 uniform float u_d3;
 uniform float u_d4;
@@ -669,7 +811,6 @@ uniform float u_snare;
 uniform float u_crash;
 uniform float u_cata;
 
-// Accumulators
 uniform float u_noise;
 uniform float u_drone;
 uniform float u_drum;
@@ -677,10 +818,8 @@ uniform float u_pot;
 uniform float u_distort;
 uniform float u_flash;
 
-// Previous frame
 uniform sampler2D u_prev;
 
-// ─── HASH FUNCTIONS ───
 float hash(vec2 p) {
   return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
 }
@@ -688,7 +827,6 @@ float hash1(float n) {
   return fract(sin(n) * 43758.5453);
 }
 
-// ─── NOISE (value noise for organic textures) ───
 float vnoise(vec2 p) {
   vec2 i = floor(p);
   vec2 f = fract(p);
@@ -700,7 +838,6 @@ float vnoise(vec2 p) {
   return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
 }
 
-// ─── FBM for Von Neumann-style organic structures ───
 float fbm(vec2 p) {
   float v = 0.0, a = 0.5;
   mat2 rot = mat2(0.8, 0.6, -0.6, 0.8);
@@ -712,7 +849,6 @@ float fbm(vec2 p) {
   return v;
 }
 
-// ─── VON NEUMANN CA-LIKE PATTERN ───
 float caPattern(vec2 uv, float t) {
   vec2 p = uv * 40.0;
   vec2 cell = floor(p);
@@ -732,7 +868,6 @@ float caPattern(vec2 uv, float t) {
   return alive * edge;
 }
 
-// ─── SIGNAL PROPAGATION ───
 float signalWave(vec2 uv, float t, float speed, float dir) {
   float angle = dir * 3.14159 * 0.5;
   vec2 d = vec2(cos(angle), sin(angle));
@@ -745,7 +880,6 @@ void main() {
   vec2 centeredUV = uv - 0.5;
   float t = u_time;
 
-  // ─── 1) FEEDBACK with analog persistence ───
   float drift = (hash1(t * 13.7) - 0.5) * u_noise * 0.008 +
                 (hash1(t * 7.3) - 0.5) * u_drum * 0.025;
   float rollSpeed = u_drone * 0.0004 + u_noise * 0.0002;
@@ -766,7 +900,6 @@ void main() {
 
   float col = fb;
 
-  // ─── 2) VON NEUMANN CA FIELD ───
   float ca = 0.0;
   float caBase = caPattern(uv, t * 0.3);
   ca += caBase * 0.3;
@@ -787,7 +920,6 @@ void main() {
 
   col += ca;
 
-  // ─── 3) NOISE SYNTH OVERLAYS ───
   if (u_e1 > 0.05) {
     float tearY = hash1(floor(t * 30.0 + uv.y * 15.0));
     float tear = step(1.0 - u_e1 * 0.3, tearY);
@@ -831,7 +963,6 @@ void main() {
     col += dronePulse * breathe * 0.3;
   }
 
-  // ─── 4) SCREAM VOICES (5-8) ───
   if (u_d1 > 0.05) {
     float rings = sin(length(centeredUV) * 30.0 - t * 2.0) * 0.5 + 0.5;
     col += rings * u_d1 * 0.12;
@@ -849,7 +980,6 @@ void main() {
     col += wave * u_d4 * 0.1;
   }
 
-  // ─── 5) DRUM IMPACTS ───
   if (u_kick > 0.05) {
     float dist = length(centeredUV);
     float ring = smoothstep(0.02, 0.0, abs(dist - u_kick * 0.5));
@@ -890,7 +1020,6 @@ void main() {
     col = mix(col, texture2D(u_prev, uv + vec2(megaShift * megaTear, 0.0)).r, megaTear * 0.6);
   }
 
-  // ─── 6) POT MACRO ───
   if (u_pot > 0.01) {
     float potBright = u_pot * u_pot;
     float radial = smoothstep(0.6, 0.15, length(centeredUV));
@@ -904,7 +1033,6 @@ void main() {
     }
   }
 
-  // ─── 7) VHS ARTIFACTS ───
   if (u_noise > 0.3) {
     float jitterLine = step(0.92, hash(vec2(floor(uv.y * 100.0), floor(t * 15.0))));
     float jitterAmt = (hash1(floor(uv.y * 100.0) + t * 20.0) - 0.5) * u_noise * 0.02;
@@ -919,17 +1047,14 @@ void main() {
     col = mix(dropColor * 0.1, col, dropout);
   }
 
-  // ─── 8) NOISE+DRONE CROSS-POLLINATION ───
   if (u_noise > 0.3 && u_drone > 0.3) {
     float cross = u_noise * u_drone;
     float particle = step(0.997 - cross * 0.003, hash(gl_FragCoord.xy * 0.1 + t * 7.0));
     col += particle * cross * 0.5;
   }
 
-  // ─── FLASH ───
   col += u_flash * 0.4;
 
-  // ─── CLAMP & OUTPUT ───
   col = clamp(col, 0.0, 1.0);
   gl_FragColor = vec4(vec3(col), 1.0);
 }
@@ -945,10 +1070,7 @@ function initGL() {
     preserveDrawingBuffer: false,
     powerPreference: 'high-performance'
   });
-  if (!gl) {
-    console.error('WebGL not supported');
-    return false;
-  }
+  if (!gl) { console.error('WebGL not supported'); return false; }
   return true;
 }
 
@@ -1023,12 +1145,16 @@ function setupGL() {
 }
 
 function resize() {
-  const dpr = Math.min(window.devicePixelRatio, 2);
-  const rect = vizCanvas.getBoundingClientRect();
-  W = Math.floor(rect.width * dpr);
-  H = Math.floor(rect.height * dpr);
+  // Mobile: lower DPR cap for performance
+  const mobileDPR = isMobile() ? 1.5 : 2;
+  const dpr = Math.min(window.devicePixelRatio, mobileDPR);
 
-  const maxDim = 1920;
+  // Canvas is now fullscreen (position:fixed inset:0)
+  W = Math.floor(window.innerWidth * dpr);
+  H = Math.floor(window.innerHeight * dpr);
+
+  // Lower max resolution on mobile
+  const maxDim = isMobile() ? 1080 : 1920;
   if (W > maxDim) { const s = maxDim / W; W = maxDim; H = Math.floor(H * s); }
   if (H > maxDim) { const s = maxDim / H; H = maxDim; W = Math.floor(W * s); }
 
@@ -1043,6 +1169,11 @@ function resize() {
 }
 
 window.addEventListener('resize', () => { if (gl) resize(); });
+
+// Handle orientation change
+window.addEventListener('orientationchange', () => {
+  setTimeout(() => { if (gl) resize(); }, 200);
+});
 
 // ════════════════════════════════════════════════════════════
 // RENDER LOOP
@@ -1060,7 +1191,6 @@ function frame(ts) {
   updateEnvelopes(dt);
   frameCount++;
 
-  // CSS-based shake (zero GPU cost)
   document.body.classList.toggle('shaking', shakeIntensity > 0.05 && shakeIntensity < 0.4);
   document.body.classList.toggle('shaking-hard', shakeIntensity >= 0.4);
   document.getElementById('glitchTear').classList.toggle('active', tearIntensity > 0.1);
@@ -1115,7 +1245,7 @@ function frame(ts) {
 if (setupGL()) {
   requestAnimationFrame(frame);
 } else {
-  document.getElementById('vizArea').innerHTML = '<div style="color:red;padding:20px">WebGL not available. Please use a modern browser.</div>';
+  document.body.innerHTML = '<div style="color:red;padding:20px;font-family:monospace">WebGL not available. Please use a modern browser.</div>';
 }
 
 </script>
