@@ -53,26 +53,19 @@
       color: rgba(255, 255, 255, 0.3);
     }
 
-    .tooltip {
-      bottom: 32px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: rgba(255, 255, 255, 0.08);
-      backdrop-filter: blur(16px);
-      -webkit-backdrop-filter: blur(16px);
-      padding: 12px 24px;
-      border-radius: 9999px;
-      font-size: 1rem;
-      font-weight: 500;
+    .project-label {
+      position: fixed;
+      z-index: 10;
+      pointer-events: none;
       color: #ffffff;
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      opacity: 0;
-      transition: opacity 0.3s ease;
+      font-size: 0.8rem;
+      font-weight: 500;
+      letter-spacing: 0.02em;
       white-space: nowrap;
-    }
-
-    .tooltip.visible {
-      opacity: 1;
+      text-align: center;
+      transform: translate(-50%, 0);
+      transition: opacity 0.3s ease;
+      text-shadow: 0 0 8px rgba(0,0,0,0.8), 0 0 20px rgba(0,0,0,0.5);
     }
   </style>
 </head>
@@ -85,8 +78,6 @@
     <p class="subtitle">Communicative Objects</p>
     <p class="hint">Drag to rotate · Scroll to zoom · Click to open project</p>
   </div>
-
-  <div id="tooltip" class="overlay tooltip"></div>
 
   <script type="importmap">
   {
@@ -164,26 +155,17 @@
 
         vec3 glowColor = vec3(1.0, 1.0, 1.0);
 
-        // Circular soft edge
         vec2 center = vUv - 0.5;
         float dist = length(center);
         float circle = smoothstep(0.5, 0.48, dist);
 
-        // Outer glow ring — visible when hovered
         float glowRing = smoothstep(0.55, 0.5, dist) * smoothstep(0.44, 0.48, dist);
         float glowPulse = 0.7 + 0.3 * sin(uTime * 3.0);
         float outerGlow = smoothstep(0.6, 0.48, dist) * (1.0 - smoothstep(0.48, 0.42, dist));
 
-        // Brighten image on hover
         vec3 finalColor = texColor.rgb * (1.0 + uHovered * 0.3);
-
-        // Add glow ring
         finalColor += glowColor * uHovered * glowRing * glowPulse * 3.0;
-
-        // Add soft outer bloom
         finalColor += glowColor * uHovered * outerGlow * glowPulse * 1.5;
-
-        // Overall glow tint
         finalColor += glowColor * uHovered * 0.08;
 
         float finalAlpha = alpha * circle + uHovered * outerGlow * glowPulse * 0.6;
@@ -194,7 +176,6 @@
 
     // ─── SCENE SETUP ────────────────────────────────────────────
     const container = document.getElementById('canvas-container');
-    const tooltip = document.getElementById('tooltip');
 
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x050508);
@@ -314,6 +295,9 @@
 
     const sphereRadius = 7;
 
+    // ─── CREATE HTML LABELS ─────────────────────────────────────
+    const labels = [];
+
     projects.forEach((project, index) => {
       const texture = textureLoader.load(project.imageUrl);
       texture.minFilter = THREE.LinearFilter;
@@ -356,9 +340,17 @@
       };
       mesh.userData.hoverProgress = 0;
       mesh.userData.targetHover = 0;
+
+      // Create HTML label for this project
+      const label = document.createElement('div');
+      label.className = 'project-label';
+      label.textContent = project.title;
+      label.style.opacity = '0';
+      document.body.appendChild(label);
+      labels.push({ el: label, targetOpacity: 0.25, currentOpacity: 0 });
     });
 
-    // Draw constellation lines between adjacent projects
+    // Draw constellation lines
     for (let i = 0; i < projects.length; i++) {
       const next = (i + 1) % projects.length;
       const points = [
@@ -376,6 +368,20 @@
       return Math.pow(2, -10 * t) * Math.sin((t - 0.1) * 5 * Math.PI) + 1;
     }
     function lerp(a, b, t) { return a + (b - a) * t; }
+
+    // ─── PROJECT 3D → 2D SCREEN POSITION ────────────────────────
+    const tempVec = new THREE.Vector3();
+
+    function toScreen(mesh) {
+      tempVec.copy(mesh.position);
+      tempVec.project(camera);
+
+      return {
+        x: (tempVec.x * 0.5 + 0.5) * window.innerWidth,
+        y: (-tempVec.y * 0.5 + 0.5) * window.innerHeight,
+        behind: tempVec.z > 1,
+      };
+    }
 
     // ─── ANIMATION LOOP ─────────────────────────────────────────
     function animate(now) {
@@ -396,7 +402,11 @@
         // Entrance animation
         if (!ud.ready) {
           const elapsed = now - ud.entrance.startTime;
-          if (elapsed < 0) return;
+          if (elapsed < 0) {
+            // Hide label during delay
+            labels[i].el.style.opacity = '0';
+            return;
+          }
           const t = Math.min(elapsed / ud.entrance.duration, 1);
           const posT = easeOutCubic(t);
           const scaleT = easeOutElastic(t);
@@ -410,6 +420,9 @@
           mesh.scale.set(s, s, s);
 
           if (t >= 1) ud.ready = true;
+
+          // Fade in label with entrance
+          labels[i].targetOpacity = t > 0.5 ? 0.25 : 0;
         } else {
           const tgt = ud.target;
           mesh.position.x = tgt.x + Math.sin(time * 0.5 + i) * 0.08;
@@ -428,6 +441,32 @@
         }
 
         mesh.lookAt(camera.position);
+
+        // ─── UPDATE LABEL POSITION ──────────────────────────────
+        const screen = toScreen(mesh);
+        const label = labels[i];
+
+        if (screen.behind) {
+          label.el.style.opacity = '0';
+        } else {
+          // Position label above the circle
+          const offsetY = -70 - ud.hoverProgress * 10;
+          label.el.style.left = screen.x + 'px';
+          label.el.style.top = (screen.y + offsetY) + 'px';
+
+          // Set target opacity: dim by default, bright on hover
+          if (ud.ready) {
+            label.targetOpacity = ud.targetHover === 1 ? 1 : 0.25;
+          }
+
+          // Smooth opacity transition
+          label.currentOpacity = lerp(label.currentOpacity, label.targetOpacity, 0.1);
+          label.el.style.opacity = label.currentOpacity.toFixed(3);
+
+          // Scale up slightly on hover
+          const labelScale = 1 + ud.hoverProgress * 0.15;
+          label.el.style.transform = `translate(-50%, 0) scale(${labelScale.toFixed(3)})`;
+        }
       });
 
       controls.update();
@@ -453,8 +492,6 @@
         const idx = hits[0].object.userData.index;
         hoveredIndex = idx;
         document.body.style.cursor = 'pointer';
-        tooltip.textContent = projects[idx].title;
-        tooltip.classList.add('visible');
 
         meshes.forEach((m, i) => {
           m.userData.targetHover = i === idx ? 1 : 0;
@@ -462,7 +499,6 @@
       } else {
         hoveredIndex = null;
         document.body.style.cursor = 'default';
-        tooltip.classList.remove('visible');
         meshes.forEach(m => { m.userData.targetHover = 0; });
       }
     });
