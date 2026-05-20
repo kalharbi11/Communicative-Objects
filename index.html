@@ -3,33 +3,367 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Communicative Objects</title>
+  <title>Khalid Alharbi — Communicative Objects</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
 
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link
-    href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700&display=swap"
-    rel="stylesheet"
-  />
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      overflow: hidden;
+      background: #ffffff;
+      color: #030213;
+    }
 
-  <link rel="stylesheet" href="style.css" />
+    #canvas-container {
+      width: 100vw;
+      height: 100vh;
+      position: fixed;
+      top: 0;
+      left: 0;
+    }
+
+    .overlay {
+      position: fixed;
+      z-index: 10;
+      pointer-events: none;
+    }
+
+    .header {
+      top: 32px;
+      left: 50%;
+      transform: translateX(-50%);
+      text-align: center;
+    }
+
+    .header h1 {
+      font-size: 1.5rem;
+      font-weight: 500;
+      margin-bottom: 4px;
+      color: #030213;
+    }
+
+    .header .subtitle {
+      font-size: 1.125rem;
+      color: #717182;
+      margin-bottom: 12px;
+    }
+
+    .header .hint {
+      font-size: 0.875rem;
+      color: #717182;
+    }
+
+    .tooltip {
+      bottom: 32px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0, 0, 0, 0.1);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      padding: 12px 24px;
+      border-radius: 9999px;
+      font-size: 1rem;
+      font-weight: 500;
+      color: #030213;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      white-space: nowrap;
+    }
+
+    .tooltip.visible {
+      opacity: 1;
+    }
+  </style>
 </head>
 <body>
-    <div class="project-list">
-        <h1>Communicative Objects</h1>
-        <p>Welcome! Explore the interactive projects below:</p>
-        <ul id="project-links">
-            <li><a href="dotted-self-portrait/editor.html">Dotted Self Portrait</a></li>
-            <li><a href="dual-portraits/index.html">Dual Portraits</a></li>
-            <li><a href="squares-landscape/index.html">Squares Landscape</a></li>
-            <li><a href="noise-map/index.html">Brooklyn ZIP Noise Map</a></li>
-            <li><a href="ambient-turing-machine/web/index.html">Ambient Turing Machine</a></li>
-            <li><a href="void-machine/index.html">Void Machine</a></li>
-        </ul>
-    </div>
-    <script>
-        // This script will be replaced by static links below
-    </script>
-    <!-- Trigger Pages rebuild: 2026-02-09 -->
+
+  <div id="canvas-container"></div>
+
+  <div class="overlay header">
+    <h1>Khalid Alharbi</h1>
+    <p class="subtitle">Communicative Objects</p>
+    <p class="hint">Drag to rotate · Scroll to zoom · Click to open project</p>
+  </div>
+
+  <div id="tooltip" class="overlay tooltip"></div>
+
+  <!-- Three.js + OrbitControls from CDN -->
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.164.1/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.164.1/examples/jsm/"
+    }
+  }
+  </script>
+
+  <script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+    // ─── YOUR PROJECTS ─────────────────────────────────────────
+    // Replace imageUrl with your actual thumbnail paths, e.g. "images/void-machine.jpg"
+    const projects = [
+      {
+        title: "Dotted Self Portrait",
+        imageUrl: "images/dotted-self-portrait.jpg",
+        projectUrl: "dotted-self-portrait/editor.html",
+      },
+      {
+        title: "Dual Portraits",
+        imageUrl: "images/dual-portraits.jpg",
+        projectUrl: "dual-portraits/index.html",
+      },
+      {
+        title: "Squares Landscape",
+        imageUrl: "images/squares-landscape.jpg",
+        projectUrl: "squares-landscape/index.html",
+      },
+      {
+        title: "Brooklyn ZIP Noise Map",
+        imageUrl: "images/noise-map.jpg",
+        projectUrl: "noise-map/index.html",
+      },
+      {
+        title: "Ambient Turing Machine",
+        imageUrl: "images/ambient-turing-machine.jpg",
+        projectUrl: "ambient-turing-machine/web/index.html",
+      },
+      {
+        title: "Void Machine",
+        imageUrl: "images/void-machine.jpg",
+        projectUrl: "void-machine/index.html",
+      },
+      {
+        title: "Matrix Panel",
+        imageUrl: "images/matrix-panel.jpg",
+        projectUrl: "matrix-panel/index.html",
+      },
+    ];
+
+    // ─── SHADERS ────────────────────────────────────────────────
+    const vertexShader = `
+      varying vec2 vUv;
+      varying float vDistance;
+      void main() {
+        vUv = uv;
+        vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+        vDistance = -mvPosition.z;
+        gl_Position = projectionMatrix * mvPosition;
+      }
+    `;
+
+    const fragmentShader = `
+      uniform sampler2D uTexture;
+      uniform float uHovered;
+      uniform float uTime;
+      varying vec2 vUv;
+      varying float vDistance;
+      void main() {
+        vec4 texColor = texture2D(uTexture, vUv);
+        float alpha = texColor.a * smoothstep(50.0, 20.0, vDistance);
+        vec3 glowColor = vec3(0.3, 0.6, 1.0);
+        float glowIntensity = uHovered * (0.5 + 0.5 * sin(uTime * 3.0));
+        float edge = step(0.05, vUv.x) * step(vUv.x, 0.95) * step(0.05, vUv.y) * step(vUv.y, 0.95);
+        float border = 1.0 - edge;
+        vec3 finalColor = texColor.rgb + glowColor * glowIntensity * border * 0.5;
+        finalColor += glowColor * uHovered * 0.2;
+        gl_FragColor = vec4(finalColor, alpha);
+      }
+    `;
+
+    // ─── SCENE SETUP ────────────────────────────────────────────
+    const container = document.getElementById('canvas-container');
+    const tooltip = document.getElementById('tooltip');
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0xffffff);
+    scene.fog = new THREE.Fog(0xffffff, 10, 50);
+
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    camera.position.z = 15;
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(window.devicePixelRatio);
+    container.appendChild(renderer.domElement);
+
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.05;
+    controls.minDistance = 5;
+    controls.maxDistance = 30;
+
+    scene.add(new THREE.AmbientLight(0xffffff, 0.5));
+    const pointLight = new THREE.PointLight(0xffffff, 1);
+    pointLight.position.set(10, 10, 10);
+    scene.add(pointLight);
+
+    // ─── CREATE MESHES ──────────────────────────────────────────
+    const textureLoader = new THREE.TextureLoader();
+    const meshes = [];
+    const raycaster = new THREE.Raycaster();
+    const mouse = new THREE.Vector2();
+    let hoveredIndex = null;
+
+    projects.forEach((project, index) => {
+      const texture = textureLoader.load(project.imageUrl);
+      texture.minFilter = THREE.LinearFilter;
+
+      const geometry = new THREE.CircleGeometry(1.5, 64);
+      const material = new THREE.ShaderMaterial({
+        uniforms: {
+          uTexture: { value: texture },
+          uHovered: { value: 0 },
+          uTime: { value: 0 },
+        },
+        vertexShader,
+        fragmentShader,
+        transparent: true,
+        side: THREE.DoubleSide,
+      });
+
+      const mesh = new THREE.Mesh(geometry, material);
+
+      // Distribute on a sphere
+      const radius = 12;
+      const phi = Math.acos(2 * (index / projects.length) - 1);
+      const theta = Math.sqrt(projects.length * Math.PI) * phi;
+
+      const target = {
+        x: radius * Math.cos(theta) * Math.sin(phi),
+        y: radius * Math.sin(theta) * Math.sin(phi),
+        z: radius * Math.cos(phi),
+      };
+
+      mesh.userData = { index, projectUrl: project.projectUrl, target, ready: false };
+      mesh.position.set(0, 0, 0);
+      mesh.scale.set(0, 0, 0);
+      mesh.lookAt(camera.position);
+
+      scene.add(mesh);
+      meshes.push(mesh);
+
+      // Entrance animation (simple easing, no gsap dependency)
+      const delay = index * 100;
+      const duration = 2000;
+      const startTime = performance.now() + delay;
+
+      mesh.userData.entrance = { startTime, duration, target };
+    });
+
+    // ─── EASING HELPERS ─────────────────────────────────────────
+    function easeOutCubic(t) {
+      return 1 - Math.pow(1 - t, 3);
+    }
+
+    function easeOutElastic(t) {
+      if (t === 0 || t === 1) return t;
+      return Math.pow(2, -10 * t) * Math.sin((t - 0.1) * 5 * Math.PI) + 1;
+    }
+
+    function lerp(a, b, t) {
+      return a + (b - a) * t;
+    }
+
+    // ─── HOVER ANIMATION STATE ──────────────────────────────────
+    // Each mesh tracks its own hover progress (0→1) so we don't need gsap
+    meshes.forEach(m => {
+      m.userData.hoverProgress = 0;
+      m.userData.targetHover = 0;
+    });
+
+    // ─── ANIMATION LOOP ─────────────────────────────────────────
+    function animate(now) {
+      requestAnimationFrame(animate);
+      const time = now * 0.001;
+
+      meshes.forEach((mesh, i) => {
+        const ud = mesh.userData;
+        const mat = mesh.material;
+
+        // Entrance animation
+        if (!ud.ready) {
+          const elapsed = now - ud.entrance.startTime;
+          if (elapsed < 0) return; // still in delay
+          const t = Math.min(elapsed / ud.entrance.duration, 1);
+          const posT = easeOutCubic(t);
+          const scaleT = easeOutElastic(t);
+
+          mesh.position.set(
+            ud.entrance.target.x * posT,
+            ud.entrance.target.y * posT,
+            ud.entrance.target.z * posT
+          );
+          const s = scaleT;
+          mesh.scale.set(s, s, s);
+
+          if (t >= 1) ud.ready = true;
+        } else {
+          // Gentle floating
+          const tgt = ud.target;
+          mesh.position.x = tgt.x + Math.sin(time * 0.5 + i) * 0.1;
+          mesh.position.y = tgt.y + Math.cos(time * 0.3 + i) * 0.1;
+          mesh.position.z = tgt.z + Math.sin(time * 0.4 + i) * 0.1;
+        }
+
+        // Hover interpolation (smooth without gsap)
+        ud.hoverProgress = lerp(ud.hoverProgress, ud.targetHover, 0.1);
+        mat.uniforms.uHovered.value = ud.hoverProgress;
+        mat.uniforms.uTime.value = time;
+
+        // Scale from hover
+        const hoverScale = 1 + ud.hoverProgress * 0.3;
+        if (ud.ready) {
+          mesh.scale.set(hoverScale, hoverScale, hoverScale);
+        }
+
+        // Always face camera
+        mesh.lookAt(camera.position);
+      });
+
+      controls.update();
+      renderer.render(scene, camera);
+    }
+    requestAnimationFrame(animate);
+
+    // ─── EVENTS ─────────────────────────────────────────────────
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    window.addEventListener('mousemove', (e) => {
+      mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+      mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+
+      raycaster.setFromCamera(mouse, camera);
+      const hits = raycaster.intersectObjects(meshes);
+
+      if (hits.length > 0) {
+        const idx = hits[0].object.userData.index;
+        hoveredIndex = idx;
+        document.body.style.cursor = 'pointer';
+        tooltip.textContent = projects[idx].title;
+        tooltip.classList.add('visible');
+
+        meshes.forEach((m, i) => {
+          m.userData.targetHover = i === idx ? 1 : 0;
+        });
+      } else {
+        hoveredIndex = null;
+        document.body.style.cursor = 'default';
+        tooltip.classList.remove('visible');
+        meshes.forEach(m => { m.userData.targetHover = 0; });
+      }
+    });
+
+    window.addEventListener('click', () => {
+      if (hoveredIndex !== null) {
+        window.location.href = projects[hoveredIndex].projectUrl;
+      }
+    });
+  </script>
 </body>
 </html>
