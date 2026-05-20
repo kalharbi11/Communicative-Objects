@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Matrix Panel</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+
+    <header class="page-intro">
+      <a class="home-link" href="../index.html">Return to home</a>
+      <h1 class="page-title">Matrix Panel</h1>
+      <p class="page-desc">Generative light sculpture with body-responsive color field. Wall-mounted LED matrix driven by real-time procedural animation and human silhouette interaction.</p>
+    </header>
+
+    <!-- ====== SLIDESHOW 1 ====== -->
+    <div class="slideshow" id="slideshow1">
+      <div class="slideshow-track">
+        <div class="slide active">
+          <img src="media/slide1.jpg" alt="Matrix panel overview" />
+        </div>
+        <div class="slide">
+          <video src="media/slide2.mp4" muted loop playsinline></video>
+        </div>
+        <div class="slide">
+          <img src="media/slide3.jpg" alt="Color field detail" />
+        </div>
+        <div class="slide">
+          <video src="media/slide4.mp4" muted loop playsinline></video>
+        </div>
+        <div class="slide">
+          <img src="media/slide5.jpg" alt="Installation view" />
+        </div>
+      </div>
+      <button class="slide-btn prev" aria-label="Previous">&#8249;</button>
+      <button class="slide-btn next" aria-label="Next">&#8250;</button>
+      <div class="slide-dots"></div>
+    </div>
+
+    <!-- ====== DESCRIPTION ====== -->
+    <main class="content">
+
+      <section class="text-block">
+        <p>The luminous surface produces organic color forms that behave like pigment diffusing through still water. Multiple independent color bodies — each governed by its own internal clock — drift across the panel on trajectories that never quite repeat. Their edges are not circular or geometric but softly distorted by procedural noise, giving them the irregular boundaries of natural phenomena: cloud formations, ink in water, light through stained glass viewed at a distance.</p>
+        <p>The palette draws from the muted spectrum of raw earth — terracotta, burnt sienna, dusty mauve, sage, warm stone, amber fog. These are colors that exist in clay and sand and dried flowers, not in screens. The brightest moments never reach white. The darkest moments never reach black. The entire tonal range lives in the middle registers, where color is felt more than seen — a perpetual golden hour that shifts so slowly the viewer questions whether anything has changed at all.</p>
+        <p>Color transitions happen across two timescales simultaneously. Within each form, hues drift gradually through curated gradient palettes over tens of seconds. Between forms, the palettes themselves slowly crossfade into one another over the course of minutes — a metamorphosis so gradual it can only be perceived in retrospect. The viewer who glances away and looks back will find a different composition than the one they left, though they could never identify the moment it changed.</p>
+      </section>
+
+      <section class="text-block">
+        <h2>Body as Instrument</h2>
+        <p>The piece watches back. A camera mounted above the panel feeds a real-time segmentation model that extracts the viewer's silhouette — not as a point or a skeleton but as a continuous body-shaped mask, the full contour of shoulders, arms, torso, and head resolved at the pixel scale of the panel itself.</p>
+        <p>Where the silhouette falls across the luminous surface, the color shifts to its complement. Warm terracotta becomes cool teal. Dusty amber becomes deep indigo. Sage drifts toward soft violet. The transformation is not a filter laid on top but a rotation through color space — the hue wheel turned halfway around — so the shifted colors carry the same tonal weight and saturation character as the originals. The body does not overwrite the composition. It refracts it.</p>
+        <p>The silhouette boundary does not snap on and off. Each pixel maintains its own fade state, rising smoothly into the complementary palette as the body arrives and dissolving back to the base color as it departs. The edges of the body's influence are soft, not hard — a gradient of color rotation that makes the boundary between self and surface ambiguous. The viewer's shadow becomes a living negative of the field it inhabits.</p>
+        <p>When the viewer steps away, the complementary colors drain slowly from the surface like dye washing out of fabric, and the original earth tones reassert themselves over the course of a breath. When no one is present, the piece returns to its autonomous state — a self-contained organism of drifting color that requires no audience but responds to one.</p>
+      </section>
+
+      <hr class="divider" />
+
+      <section class="text-block">
+        <h2>Light Behavior</h2>
+        <p>The surface breathes. A slow global modulation — imperceptible in any single frame — raises and lowers the overall luminosity like the chest of a sleeping body. Layered on top of this, each color form pulses at its own independent rate, creating a polyrhythmic interplay of intensities that produces the sensation of living light rather than programmed sequence.</p>
+        <p>Every pixel on every frame is temporally blended with its own recent history. The panel carries a memory of where it has been, and each new moment is a negotiation between the present calculation and the residual glow of the previous state. This temporal smoothing eliminates the digital staccato of frame-by-frame rendering and replaces it with continuous, analog-feeling transitions — light that pours rather than switches.</p>
+        <p>The body silhouette undergoes its own temporal processing before it reaches the panel. The raw segmentation mask — noisy, flickering at the edges, prone to the momentary dropouts inherent in real-time computer vision — passes through a multi-stage stabilization pipeline. A floating-point accumulator absorbs each new frame gradually, and a hysteresis threshold prevents edge pixels from oscillating between states. The result is a silhouette that moves with the viewer but breathes with the panel — responsive without being reactive, present without being anxious.</p>
+        <p>The edges of the luminous field fade to darkness organically, dissolving the rectangular boundary of the physical panel into the surrounding wall. The light appears to emerge from within the surface rather than being projected onto it — an effect that transforms the object from a screen into a source, from a display into a presence.</p>
+      </section>
+
+      <hr class="divider" />
+
+      <section class="text-block">
+        <h2>Modulation Architecture</h2>
+        <p>The visual field is constructed from seven independent luminous bodies, each defined by a unique constellation of parameters:</p>
+        <ul>
+          <li><strong>Drift velocity</strong> — each form moves on its own sine-wave trajectory through the field, with X and Y periods chosen from prime-number relationships to prevent synchronization and repetition</li>
+          <li><strong>Scale breathing</strong> — the spatial extent of each form expands and contracts on its own slow cycle, causing forms to periodically engulf one another or retreat into intimate pools of color</li>
+          <li><strong>Edge morphology</strong> — procedural noise distorts the boundary of each form in real time, producing organic contours that slowly evolve and reshape, ensuring no form ever appears as a circle or ellipse</li>
+          <li><strong>Luminance pulsing</strong> — independent brightness modulation on each form creates the sensation of forms emerging from and receding into the background field</li>
+          <li><strong>Chromatic drift</strong> — each form slowly traverses its assigned color palette, while the palettes themselves undergo long-duration crossfades between six curated earth-tone gradients</li>
+        </ul>
+      </section>
+
+      <hr class="divider" />
+
+      <section class="text-block">
+        <h2>Interaction Architecture</h2>
+        <p>The body tracking system operates as a parallel layer that never interrupts the base animation. A webcam captures the scene at 30 frames per second. A segmentation model isolates the human figure from the background, producing a confidence mask that is thresholded, morphologically cleaned, and downsampled to match the 80×48 pixel resolution of the LED matrix. The resulting one-bit-per-pixel silhouette is packed into 480 bytes and transmitted over USB serial at 20 frames per second to the microcontroller driving the panel.</p>
+        <p>On the panel side, the silhouette mask feeds a per-pixel overlay system. Each pixel maintains an independent fade value that ramps toward full intensity when the body is present and decays when it is not. The overlay converts the base color to HSV, rotates the hue by a configurable offset — defaulting to 128 out of 255, the complementary position — boosts saturation and brightness slightly, and blends the result back against the original in proportion to the fade value. The entire operation adds negligible computational cost to the existing render loop.</p>
+        <p>The interaction parameters — hue rotation angle, saturation boost, brightness boost — travel alongside the mask data in every serial packet, allowing real-time adjustment from the host application without reflashing the firmware. The system degrades gracefully: if the serial connection drops or the camera loses tracking, the overlay fades to zero over half a second and the autonomous animation continues uninterrupted.</p>
+      </section>
+
+    </main>
+
+    <!-- ====== SLIDESHOW 2 ====== -->
+    <div class="slideshow" id="slideshow2">
+      <div class="slideshow-track">
+        <div class="slide active">
+          <img src="media/detail1.jpg" alt="Hardware detail" />
+        </div>
+        <div class="slide">
+          <video src="media/detail2.mp4" muted loop playsinline></video>
+        </div>
+        <div class="slide">
+          <img src="media/detail3.jpg" alt="Wiring close-up" />
+        </div>
+        <div class="slide">
+          <img src="media/detail4.jpg" alt="Panel assembly" />
+        </div>
+      </div>
+      <button class="slide-btn prev" aria-label="Previous">&#8249;</button>
+      <button class="slide-btn next" aria-label="Next">&#8250;</button>
+      <div class="slide-dots"></div>
+    </div>
+
+    <!-- ====== SYSTEM OVERVIEW ====== -->
+    <main class="content">
+
+      <section class="text-block">
+        <h2>System Overview</h2>
+        <p>Wall-mounted generative light sculpture. 15 addressable LED matrix panels in a 5×3 grid producing an 80×48 pixel resolution surface (3,840 total LEDs). Driven by an ESP32-S3 microcontroller running real-time procedural animation. A secondary 4-panel strip (64×16, 1,024 LEDs) operates independently on a separate ESP32-S3.</p>
+      </section>
+
+      <section class="text-block specs">
+        <h2>Hardware Components — Camera + Engine</h2>
+        <ul>
+          <li>Raspberry Pi 5</li>
+          <li>Raspberry Pi Camera Module 3</li>
+        </ul>
+      </section>
+
+      <section class="text-block specs">
+        <h2>Hardware Components — LED Matrix Screen</h2>
+
+        <h3>Main Panel (5×3 Grid)</h3>
+        <ul>
+          <li>15× WS2812B 16×16 LED matrix panels (256 LEDs each)</li>
+          <li>1× ESP32-S3 Super Mini microcontroller</li>
+          <li>1× 5V 60A DC power supply (3 output lines, one per row)</li>
+          <li>1× 74HCT125 logic level shifter (3.3V to 5V on all data lines)</li>
+          <li>4× 470Ω resistors (one per data pin)</li>
+          <li>15× 1000µF electrolytic capacitors (one per panel)</li>
+          <li>3× 1000µF electrolytic capacitors (one per power supply output line)</li>
+          <li>15× 5A fuses (one per panel)</li>
+          <li>3× 20A fuses (one per power supply output line)</li>
+          <li>1× USB power brick (independent MCU power)</li>
+          <li>1× diffusion layer</li>
+          <li>1× wood mounting frame</li>
+        </ul>
+
+        <h3>Secondary Strip (4×1 Line)</h3>
+        <ul>
+          <li>4× WS2812B 16×16 LED matrix panels</li>
+          <li>1× ESP32-S3 Super Mini microcontroller</li>
+          <li>1× 470Ω resistor on data pin 6</li>
+        </ul>
+      </section>
+
+      <section class="text-block specs">
+        <h2>Wiring Architecture</h2>
+
+        <h3>Power Distribution</h3>
+        <ul>
+          <li>Each of the three rows of five matrices connects to a dedicated power supply output line</li>
+          <li>Each output line is protected by a 20A fuse and a 1000µF bulk capacitor</li>
+          <li>Each individual matrix receives direct power and ground connections (not daisy-chained)</li>
+          <li>Each matrix has its own 5A fuse and 1000µF capacitor at input</li>
+          <li>The ESP32-S3 is powered independently via USB to prevent ground loops</li>
+          <li>Common ground shared between MCU and LED matrices</li>
+        </ul>
+
+        <h3>Data Distribution</h3>
+        <ul>
+          <li>4 data pins utilizing all 4 available RMT channels on the ESP32-S3</li>
+          <li>Pin 5 drives Column 0 (3 panels, 768 LEDs)</li>
+          <li>Pin 4 drives Column 1 (3 panels, 768 LEDs)</li>
+          <li>Pin 1 drives Column 2 (3 panels, 768 LEDs)</li>
+          <li>Pin 8 drives Columns 3 and 4 chained (6 panels, 1,536 LEDs)</li>
+          <li>All data lines pass through the 74HCT125 logic level shifter</li>
+          <li>470Ω series resistor on each data pin for signal integrity</li>
+        </ul>
+
+        <h3>Panel Orientation</h3>
+        <ul>
+          <li>Data flows bottom to top within each column</li>
+          <li>Middle row panels are physically rotated 180 degrees</li>
+          <li>Vertical serpentine wiring within each 16×16 panel</li>
+        </ul>
+      </section>
+
+    </main>
+
+    <footer class="page-footer">
+      <a class="home-link" href="../index.html">Return to home</a>
+    </footer>
+
+    <script src="slideshow.js"></script>
+  </body>
+</html>
