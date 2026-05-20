@@ -24,6 +24,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const dots = dotsWrap.querySelectorAll(".dot");
 
     function goTo(index) {
+      // pause current video
       const curVid = slides[current].querySelector("video");
       if (curVid) curVid.pause();
 
@@ -35,6 +36,7 @@ document.addEventListener("DOMContentLoaded", () => {
       slides[current].classList.add("active");
       dots[current].classList.add("active");
 
+      // play new video if present
       const newVid = slides[current].querySelector("video");
       if (newVid) {
         newVid.currentTime = 0;
@@ -79,21 +81,23 @@ document.addEventListener("DOMContentLoaded", () => {
       { passive: true }
     );
 
-    // autoplay
+    // autoplay timer
     function resetTimer() {
       clearInterval(timer);
       const vid = slides[current].querySelector("video");
       if (vid && !vid.loop) {
+        // for non-looping videos, advance when video ends
         vid.onended = () => next();
       } else {
         timer = setInterval(next, DELAY);
       }
     }
 
+    // pause on hover
     container.addEventListener("mouseenter", () => clearInterval(timer));
     container.addEventListener("mouseleave", () => resetTimer());
 
-    // visibility
+    // pause/play based on visibility
     const obs = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
@@ -111,7 +115,7 @@ document.addEventListener("DOMContentLoaded", () => {
     );
     obs.observe(container);
 
-    // init first video
+    // start first slide video if present
     const firstVid = slides[0].querySelector("video");
     if (firstVid) firstVid.play().catch(() => {});
 
